@@ -1,0 +1,184 @@
+/* src/components/VolunteerOpportunities.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --primary: #2c3e50;
+  --secondary: #2980b9;
+  --accent: #e74c3c;
+  --bg: #f8f9fa;
+  --card-bg: #ffffff;
+  --text: #2d3748;
+  --border: #e2e8f0;
+  --radius: 12px;
+  --transition: all 0.3s ease;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  margin: 0;
+  padding: 0;
+  color: var(--text);
+}
+
+.volunteer-opportunities {
+  max-width: 1200px;
+  margin: 120px auto 40px;
+  padding: 20px;
+}
+
+.volunteer-opportunities h1 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  color: var(--primary);
+}
+
+/* Primary Button */
+.btn-primary {
+  display: inline-block;
+  background: var(--secondary);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-weight: 600;
+  transition: var(--transition);
+  margin-bottom: 20px;
+}
+
+.btn-primary:hover {
+  background: var(--accent);
+}
+
+/* Opportunity List - Grid Layout */
+.opportunity-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+/* Opportunity Card */
+.opportunity-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--transition);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: var(--transition);
+}
+
+.opportunity-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Card Headings & Text */
+.opportunity-card h2 {
+  font-size: 1.8rem;
+  margin: 0;
+  color: var(--secondary);
+}
+
+.opportunity-card p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Card Buttons - Smaller and More Compact */
+.card-buttons {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.btn-edit,
+.btn-delete,
+.btn-volunteers {
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: var(--transition);
+  text-transform: uppercase;
+}
+
+.btn-edit {
+  background: var(--secondary);
+  color: #fff;
+}
+
+.btn-edit:hover {
+  background: var(--accent);
+}
+
+.btn-delete {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-delete:hover {
+  background: darkred;
+}
+
+.btn-volunteers {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-volunteers:hover {
+  background: #1a3a69;
+}
+
+/* Volunteer List inside Card */
+.volunteer-list {
+  margin-top: 10px;
+  background: #f0f4f8;
+  padding: 10px;
+  border-radius: var(--radius);
+}
+
+.volunteer-list h3 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+  color: var(--secondary);
+}
+
+.volunteer-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.volunteer-list li {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 0;
+}
+
+.volunteer-list li:last-child {
+  border-bottom: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .volunteer-opportunities {
+    padding: 16px;
+  }
+  
+  .opportunity-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .btn-primary {
+    width: 100%;
+    text-align: center;
+  }
+}

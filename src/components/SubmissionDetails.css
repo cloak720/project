@@ -1,0 +1,82 @@
+/* Container for the submission details page */
+.submission-details {
+  margin: 30px auto;
+  margin-top: 5%;
+  padding: 20px;
+  max-width: 1200px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Table Styling */
+.submission-details table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.submission-details table th, .submission-details table td {
+  padding: 12px 15px;
+  text-align: left;
+  border: 1px solid #ddd;
+  font-size: 16px;
+  color: #333;
+}
+
+.submission-details table th {
+  background-color: #f7fafc;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.submission-details table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.submission-details table tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* Button styling */
+.submission-details button {
+  background-color: #e53935;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.submission-details button:hover {
+  background-color: #d32f2f;
+}
+
+/* Error message styling */
+.error {
+  color: #e53935;
+  font-size: 16px;
+  font-weight: bold;
+  margin-top: 20px;
+  text-align: center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .submission-details {
+    padding: 15px;
+  }
+
+  .submission-details table th, .submission-details table td {
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  .submission-details button {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+  }
+}

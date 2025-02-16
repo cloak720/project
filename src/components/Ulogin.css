@@ -1,0 +1,181 @@
+/* Theme Variables */
+:root {
+  --primary-light: #4a90e2;
+  --primary-dark: #2d5980;
+  --background-light: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --background-dark: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+  --card-bg-light: rgba(255, 255, 255, 0.95);
+  --card-bg-dark: rgba(30, 41, 59, 0.95);
+  --text-light: #2d3748;
+  --text-dark: #f8fafc;
+  --input-bg-light: #edf2f7;
+  --input-bg-dark: #1e293b;
+}
+#abc{color: #4a90e2;}
+/* Login Page Container */
+.ulogin__loginPage {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--background-light);
+  transition: background 0.3s ease;
+}
+
+body.dark .ulogin__loginPage {
+  background: var(--background-dark);
+}
+
+/* Login Container */
+.ulogin__loginContainer {
+  background: var(--card-bg-light);
+  padding: 2.5rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  transition: all 0.3s ease;
+}
+
+body.dark .ulogin__loginContainer {
+  background: var(--card-bg-dark);
+}
+
+/* Header Section */
+.ulogin__headerWithToggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.ulogin__headerWithToggle h2 {
+  color: var(--text-light);
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+body.dark .ulogin__headerWithToggle h2 {
+  color: var(--text-dark);
+}
+
+/* Theme Toggle */
+.ulogin__themeToggle {
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  background: var(--input-bg-light);
+  transition: all 0.3s ease;
+}
+
+body.dark .ulogin__themeToggle {
+  background: var(--input-bg-dark);
+}
+
+.ulogin__themeToggle:hover {
+  transform: scale(1.1);
+}
+
+.ulogin_moonIcon,
+.ulogin_sunIcon {
+  font-size: 1.25rem;
+  color:#4a90e2 ;
+}
+
+body.dark .ulogin_moonIcon,
+body.dark .ulogin_sunIcon {
+  color: var(--text-dark);
+}
+
+/* Form Elements */
+.ulogin__inputContainer {
+  margin-bottom: 1.5rem;
+}
+
+.ulogin__input {
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  background: var(--input-bg-light);
+  color: black;
+  transition: all 0.3s ease;
+}
+
+body.dark .ulogin__input {
+  background: var(--input-bg-dark);
+  border-color: #334155;
+  color: var(--text-dark);
+}
+
+.ulogin__input:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+.ulogin__button {
+  width: 100%;
+  padding: 1rem;
+  background: var(--primary-light);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.ulogin__button:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.ulogin__button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Links and Error Messages */
+.ulogin__ard {
+  text-align: center;
+  margin-top: 1.5rem;
+  color:black;
+}
+
+body.dark .ulogin__ard {
+  color: var(--text-dark);
+}
+
+.ulogin__ard a {
+  color: var(--primary-light);
+  text-decoration: none;
+  font-weight: 600;
+  position: relative;
+}
+
+.ulogin__ard a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--primary-light);
+  transition: width 0.3s ease;
+}
+
+.ulogin__ard a:hover::after {
+  width: 100%;
+}
+
+.ulogin__error {
+  color: #e53e3e;
+  background: #fed7d7;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}

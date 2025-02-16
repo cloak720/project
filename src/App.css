@@ -1,0 +1,30 @@
+/* Global CSS Variables */
+:root {
+    --primary-bg: #ffffff;
+    --secondary-bg: #f8f9fa;
+    --primary-text: #212529;
+    --secondary-text: #495057;
+    --accent-color: #4a90e2;
+    --border-color: #dee2e6;
+    --hover-bg: #e9ecef;
+  }
+  
+  .dark-mode {
+    --primary-bg: #1a1a1a;
+    --secondary-bg: #2d2d2d;
+    --primary-text: #f8f9fa;
+    --secondary-text: #adb5bd;
+    --accent-color: #63a4ff;
+    --border-color: #404040;
+    --hover-bg: #3d3d3d;
+  }
+  
+  /* Base styles */
+  body {
+    background-color: var(--primary-bg);
+    color: var(--primary-text);
+    transition: background-color 0.3s, color 0.3s;
+  }/* Add this to your global CSS file */
+.main-content {
+  padding-top: 64px; /* Matches the header height */
+}@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');

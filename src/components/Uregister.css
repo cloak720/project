@@ -1,0 +1,195 @@
+.uregister-page {
+  /* Theme Variables (scoped to this page) */
+  --primary-light: #4a90e2;
+  --primary-dark: #2d5980;
+  --background-light: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --card-bg-light: rgba(255, 255, 255, 0.95);
+  --text-light: #2d3748;
+  --input-bg-light: #edf2f7;
+  --error-color: #e53e3e;
+  --success-color: #38a169;
+
+  /* Global text color for this page */
+  color: var(--text-light);
+
+  /* Register Page Container */
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--background-light);
+  transition: background 0.3s ease;
+}
+
+.uregister-page .register-container {
+  background: var(--card-bg-light);
+  padding: 2.5rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  transition: all 0.3s ease;
+}
+
+.uregister-page .register-container h2 {
+  color: var(--text-light);
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.uregister-page .input-container {
+  margin-bottom: 1.5rem;
+}
+
+.uregister-page .input-container input {
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  background: var(--input-bg-light);
+  color: var(--text-light);
+  transition: all 0.3s ease;
+}
+
+.uregister-page .input-container input:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+/* Input Placeholder Styling */
+.uregister-page .input-container input::placeholder {
+  color: var(--text-light);
+  opacity: 1;
+}
+.uregister-page ::-webkit-input-placeholder {
+  color: var(--text-light);
+  opacity: 1;
+}
+.uregister-page :-moz-placeholder {
+  color: var(--text-light);
+  opacity: 1;
+}
+.uregister-page ::-moz-placeholder {
+  color: var(--text-light);
+  opacity: 1;
+}
+.uregister-page :-ms-input-placeholder {
+  color: var(--text-light);
+  opacity: 1;
+}
+
+.uregister-page .role-select {
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.uregister-page .role-select label {
+  color: var(--text-light);
+  font-size: 1rem;
+}
+
+.uregister-page .role-select select {
+  padding: 0.5rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: var(--input-bg-light);
+  color: var(--text-light);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.uregister-page .role-select select:focus {
+  outline: none;
+  border-color: var(--primary-light);
+}
+
+.uregister-page .terms-container {
+  margin-bottom: 1.5rem;
+}
+
+.uregister-page .terms-container label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  color: var(--text-light);
+}
+
+.uregister-page .terms-container a {
+  color: var(--primary-light);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.uregister-page .terms-container a:hover {
+  text-decoration: underline;
+}
+
+.uregister-page .register-button {
+  width: 100%;
+  padding: 1rem;
+  background: var(--primary-light);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.uregister-page .register-button:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.uregister-page .login-link {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 1rem;
+  color: var(--text-light);
+}
+
+.uregister-page .login-link a {
+  color: var(--primary-light);
+  text-decoration: none;
+  font-weight: 600;
+  position: relative;
+}
+
+.uregister-page .login-link a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--primary-light);
+  transition: width 0.3s ease;
+}
+
+.uregister-page .login-link a:hover::after {
+  width: 100%;
+}
+
+.uregister-page .error-message {
+  color: var(--error-color);
+  background: #fed7d7;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.uregister-page .success-message {
+  color: var(--success-color);
+  font-size: 1rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}

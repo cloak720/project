@@ -1,0 +1,414 @@
+/* Global Styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Open Sans', sans-serif;
+  background-color: #f9fafc;
+  color: #333;
+  line-height: 1.6;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background: #2c3e50;
+  padding-top: 20px;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.sidebar.collapsed {
+  width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  font-size: 1.8rem;
+  color: #ecf0f1;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar ul li {
+  margin: 15px 0;
+  text-align: center;
+}
+
+.sidebar ul li a,
+.sidebar ul li button {
+  color: #ecf0f1;
+  text-decoration: none;
+  font-size: 1.1rem;
+  display: block;
+  padding: 10px 20px;
+  transition: background 0.3s ease, transform 0.3s ease;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.sidebar ul li a:hover,
+.sidebar ul li button:hover {
+  background: #34495e;
+  transform: translateX(5px);
+}
+
+/* Main Content Styles */
+.main-content {
+  margin-left: 260px;
+  transition: margin-left 0.3s ease;
+  padding: 30px;
+}
+
+.main-content.collapsed {
+  margin-left: 0;
+}
+
+/* Toggle Button Styles */
+.toggle-button {
+  position: fixed;
+  top: 40px; /* increased top offset so it doesn't overlap the header */
+  left: 280px;
+  background: #e67e22; /* orange color */
+  border: none;
+  color: #fff;
+  font-size: 1.8rem;
+  cursor: pointer;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  transition: background 0.3s ease, left 0.3s ease;
+  outline: none; /* remove any focus outline */
+}
+
+.main-content.collapsed .toggle-button {
+  left: 20px;
+  top: 40px;
+}
+
+.toggle-button:hover {
+  background: #d35400; /* darker orange on hover */
+}
+
+/* Hero Section Styles */
+.hero-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: 80px 20px;
+  background: linear-gradient(135deg, #2980b9, #2c3e50);
+  color: #fff;
+  border-radius: 10px;
+  margin-bottom: 40px;
+}
+
+.hero-section > div {
+  flex: 1;
+  min-width: 280px;
+  padding: 10px;
+}
+
+.hero-section h1 {
+  font-size: 3rem;
+  margin: 0 0 20px;
+}
+
+.hero-section p {
+  font-size: 1.2rem;
+  margin: 0 0 30px;
+  max-width: 500px;
+}
+
+.hero-section a {
+  display: inline-block;
+  background: #e74c3c;
+  color: #fff;
+  padding: 12px 25px;
+  border-radius: 5px;
+  text-transform: uppercase;
+  font-weight: bold;
+  transition: background 0.3s ease;
+}
+
+.hero-section a:hover {
+  background: #c0392b;
+}
+
+.hero-section img {
+  max-width: 100%;
+  width: 500px;
+  border-radius: 10px;
+}
+
+/* Platform Overview Styles */
+.platform-overview {
+  background: #fff;
+  border-radius: 10px;
+  padding: 40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 40px;
+}
+
+.platform-overview h2 {
+  margin-bottom: 20px;
+  font-size: 2.5rem;
+  color: #2c3e50;
+}
+
+.platform-overview p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #555;
+  margin-bottom: 20px;
+}
+
+.platform-overview ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.platform-overview ul li {
+  margin: 10px 0;
+  font-size: 1.1rem;
+  position: relative;
+  padding-left: 25px;
+}
+
+.platform-overview ul li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #27ae60;
+}
+
+/* User Feedback Styles */
+.user-feedback {
+  background: #fff;
+  border-radius: 10px;
+  padding: 40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 40px;
+}
+
+.user-feedback h2 {
+  margin-bottom: 20px;
+  font-size: 2.5rem;
+  color: #2c3e50;
+  text-align: center;
+}
+
+.user-feedback .testimonial {
+  background: #f9fafc;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 20px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.user-feedback .testimonial:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.user-feedback .testimonial p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #555;
+  margin: 0 0 10px;
+}
+
+.user-feedback .testimonial h3 {
+  font-size: 1.2rem;
+  color: #2c3e50;
+  text-align: right;
+}
+
+/* Contact Section Styles */
+.contact-section {
+  background: #fff;
+  border-radius: 10px;
+  padding: 40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.contact-section h2 {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+.contact-section p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #555;
+  margin-bottom: 30px;
+}
+
+.contact-button {
+  background: #2980b9;
+  color: #fff;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 5px;
+  text-transform: uppercase;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.contact-button:hover {
+  background: #3498db;
+}
+
+/* Footer Styles */
+footer {
+  background: #2c3e50;
+  color: #ecf0f1;
+  text-align: center;
+  padding: 40px 20px;
+  border-radius: 10px;
+  margin-bottom: 40px;
+}
+
+footer img {
+  width: 100px;
+  margin-bottom: 20px;
+}
+
+footer ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+footer ul li a {
+  color: #ecf0f1;
+  transition: color 0.3s ease;
+  font-size: 1rem;
+}
+
+footer ul li a:hover {
+  color: #e74c3c;
+}
+
+footer .social-icons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+footer .social-icons a {
+  color: #ecf0f1;
+  transition: color 0.3s ease, transform 0.3s ease;
+  font-size: 1.5rem;
+}
+
+footer .social-icons a:hover {
+  color: #e74c3c;
+  transform: scale(1.1);
+}
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+  .hero-section {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .hero-section img {
+    width: 80%;
+    margin-top: 20px;
+  }
+  
+  .main-content {
+    margin-left: 260px;
+  }
+  
+  .toggle-button {
+    left: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 220px;
+  }
+  
+  .main-content {
+    margin-left: 220px;
+    padding: 20px;
+  }
+  
+  .toggle-button {
+    left: 240px;
+  }
+  
+  .platform-overview,
+  .user-feedback,
+  .contact-section,
+  footer {
+    padding: 20px;
+  }
+  
+  .hero-section {
+    padding: 60px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 200px;
+  }
+  
+  .main-content {
+    margin-left: 200px;
+  }
+  
+  .toggle-button {
+    left: 220px;
+    font-size: 1.6rem;
+    width: 40px;
+    height: 40px;
+  }
+  
+  .hero-section h1 {
+    font-size: 2rem;
+  }
+  
+  .hero-section p {
+    font-size: 1rem;
+  }
+  
+  .platform-overview h2,
+  .user-feedback h2,
+  .contact-section h2 {
+    font-size: 2rem;
+  }
+}

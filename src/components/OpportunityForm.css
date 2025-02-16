@@ -1,0 +1,116 @@
+.opportunity-form {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 30px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-family: 'Arial', sans-serif;
+  margin-top: 100px;;
+}
+
+.opportunity-form h2 {
+  text-align: center;
+  margin-bottom: 24px;
+  font-size: 24px;
+  color: #333;
+}
+
+.opportunity-form label {
+  display: block;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #444;
+  font-size: 14px;
+}
+
+.opportunity-form input,
+.opportunity-form textarea {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #333;
+  background-color: #fff;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.opportunity-form input:focus,
+.opportunity-form textarea:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.2);
+}
+
+.opportunity-form textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.opportunity-form button {
+  width: 100%;
+  background-color: #007bff;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.opportunity-form button:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+}
+
+.opportunity-form button:active {
+  transform: translateY(0);
+}
+
+.opportunity-form button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Optional: Add a subtle animation for form inputs on load */
+@keyframes fadeIn {
+  from {
+      opacity: 0;
+      transform: translateY(10px);
+  }
+  to {
+      opacity: 1;
+      transform: translateY(0);
+  }
+}
+
+.opportunity-form input,
+.opportunity-form textarea,
+.opportunity-form button {
+  animation: fadeIn 0.5s ease-out;
+}
+.error-message {
+  color: #dc3545;
+  font-size: 14px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+@media (max-width: 600px) {
+  .opportunity-form {
+    padding: 20px;
+  }
+
+  .opportunity-form h2 {
+    font-size: 20px;
+  }
+
+  .opportunity-form input,
+  .opportunity-form textarea,
+  .opportunity-form button {
+    font-size: 14px;
+  }
+}
