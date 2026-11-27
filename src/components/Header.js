@@ -1,202 +1,235 @@
-// src/components/Header.js
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
-import { FaBell } from 'react-icons/fa';
-import './Header.css';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Bell, LogOut, Menu, Moon, Sun, X, CheckCheck } from "lucide-react";
+import api from "../lib/api";
+import { logout, ROLES, ROLE_LABELS, homePathFor } from "../lib/auth";
+import { initials, normStatus } from "../lib/format";
+import { useSession, useTheme } from "../context/AppContext";
+import logo from "../images/footerlogo.png";
+import "./Header.css";
 
-const Header = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
+const NAV = {
+  [ROLES.USER]: [
+    { to: "/", label: "Home", end: true },
+    { to: "/my-requests", label: "My requests" },
+    { to: "/user-request", label: "Ask for help" },
+    { to: "/volunteer-opportunities", label: "Opportunities" },
+    { to: "/contact", label: "Contact" },
+  ],
+  [ROLES.VOLUNTEER]: [
+    { to: "/volunteer-home", label: "Dashboard" },
+    { to: "/volunteer-opportunities", label: "Opportunities" },
+    { to: "/contact", label: "Contact" },
+  ],
+  [ROLES.ADMIN]: [
+    { to: "/admin-dashboard", label: "Dashboard" },
+    { to: "/volunteer-opportunities", label: "Opportunities" },
+  ],
+};
 
-  // Retrieve user data from session storage
-  const userRole = sessionStorage.getItem('role');
-  const userEmail = sessionStorage.getItem('userEmail');
+const seenKey = (userId) => `notif-seen-${userId}`;
 
-  // Determine if current page is an auth page.
-  const isAuthPage = ['/login', '/register'].includes(location.pathname);
+/** Builds notifications from data the backend already has: admin replies and request status changes. */
+const useNotifications = (session) => {
+  const [items, setItems] = useState([]);
+  const [seen, setSeen] = useState([]);
 
-  // Always call hooks before conditional returns.
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const res = await axios.get("http://localhost:8080/api/contact", { withCredentials: true });
-        // Filter messages that belong to this user (by email) and that have an admin reply.
-        const notifs = res.data.filter(msg => 
-          msg.email && msg.email.toLowerCase() === userEmail?.toLowerCase() &&
-          msg.reply && msg.reply.trim() !== ""
-        );
-        setNotifications(notifs);
-      } catch (err) {
-        console.error("Error fetching notifications:", err);
-      }
-    };
-
-    if (userEmail) {
-      fetchNotifications();
-    }
-  }, [userEmail]);
-
-  // Logout handler
-  const handleLogout = async () => {
+    if (!session) return;
     try {
-      const userEmailStored = sessionStorage.getItem('userEmail');
-      const userId = sessionStorage.getItem('userId');
-      if (!userEmailStored || !userId) {
-        console.error("User is not logged in.");
-        return;
-      }
-      await axios.post('http://localhost:8080/api/user/logout', { userEmail: userEmailStored, userId }, {
-        withCredentials: true,
-      });
-    } finally {
-      sessionStorage.clear();
-      navigate('/login');
+      setSeen(JSON.parse(localStorage.getItem(seenKey(session.userId))) || []);
+    } catch {
+      setSeen([]);
     }
+  }, [session]);
+
+  const load = useCallback(async () => {
+    if (!session) return setItems([]);
+    const jobs = [api.get("/contact/mine").then((r) => r.data).catch(() => [])];
+    if (session.role === ROLES.USER) jobs.push(api.get("/requests/user").then((r) => r.data).catch(() => []));
+    const [messages, requests = []] = await Promise.all(jobs);
+
+    const replies = (Array.isArray(messages) ? messages : [])
+      .filter((m) => m.reply && m.reply.trim())
+      .map((m) => ({ key: `msg-${m.id}`, title: `Reply: ${m.subject || "your message"}`, body: m.reply, to: "/contact" }));
+
+    const updates = (Array.isArray(requests) ? requests : [])
+      .filter((r) => ["ACCEPTED", "COMPLETED"].includes(normStatus(r.status)))
+      .map((r) => {
+        const done = normStatus(r.status) === "COMPLETED";
+        const who = r.volunteer ? r.volunteer.firstName : "A volunteer";
+        return {
+          key: `req-${r.id}-${normStatus(r.status)}`,
+          title: done ? `"${r.requestType}" is complete` : `"${r.requestType}" was accepted`,
+          body: done ? `${who} marked it done. You can leave them feedback.` : `${who} is on it.`,
+          to: `/my-requests?highlight=${r.id}`,
+        };
+      });
+
+    setItems([...updates, ...replies]);
+  }, [session]);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 60000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const markAllRead = () => {
+    const keys = Array.from(new Set([...seen, ...items.map((i) => i.key)]));
+    setSeen(keys);
+    localStorage.setItem(seenKey(session.userId), JSON.stringify(keys));
   };
 
-  // If on an auth page, do not render header.
-  if (isAuthPage) return null;
+  const unread = items.filter((i) => !seen.includes(i.key));
+  return { items, unread, isUnread: (i) => !seen.includes(i.key), markAllRead };
+};
+
+const useClickOutside = (ref, onOutside) => {
+  useEffect(() => {
+    const handler = (e) => ref.current && !ref.current.contains(e.target) && onOutside();
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [ref, onOutside]);
+};
+
+const Header = () => {
+  const session = useSession();
+  const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef(null);
+  const { items, unread, isUnread, markAllRead } = useNotifications(session);
+
+  const closeNotif = useCallback(() => setNotifOpen(false), []);
+  useClickOutside(notifRef, closeNotif);
+
+  // Close menus whenever the route changes.
+  useEffect(() => {
+    setMenuOpen(false);
+    setNotifOpen(false);
+  }, [location.pathname]);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
+  const links = session ? NAV[session.role] || [] : [];
 
   return (
-    <header className="header">
-      <div className="header-container">
-        {/* Logo Section */}
-        <div className="logo-section">
-          <Link to="/" className="logo-link">
-            <span className="logo-text">NeighbourAid</span>
-          </Link>
-        </div>
+    <header className="topbar">
+      <div className="container topbar__inner">
+        <Link to={session ? homePathFor(session.role) : "/"} className="brand">
+          <img src={logo} alt="" width="34" height="34" />
+          <span>
+            Neighbor<b>Aid</b>
+          </span>
+        </Link>
 
-        {/* Notification Section */}
-        <div className="notification-container">
-          <button 
-            className="notification-button" 
-            onClick={() => setShowNotifications(!showNotifications)}
-          >
-            <FaBell size={24} />
-            {notifications.length > 0 && <span className="badge">{notifications.length}</span>}
-          </button>
-          {showNotifications && (
-            <div className="notification-dropdown">
-              <div className="notification-header">
-                <h3>Notifications ({notifications.length})</h3>
-                <button 
-                  onClick={() => {
-                    setNotifications([]); // Clear notifications
-                    setShowNotifications(false); // Close dropdown
-                  }}
-                >
-                  Mark all read
-                </button>
-              </div>
-              {notifications.length === 0 ? (
-                <div className="empty-notifications">
-                  No new notifications
-                </div>
-              ) : (
-                <ul>
-                  {notifications.map(notif => (
-                    <li key={notif.id}>
-                      <div className="notification-icon">
-                        <FaBell size={16} />
-                      </div>
-                      <div className="notification-content">
-                        <div className="notification-title">
-                          {notif.subject}
-                        </div>
-                        <div className="notification-message">
-                          {notif.reply}
-                        </div>
-                        <div className="notification-time">
-                          <span>Admin response</span>
-                          {notif.createdAt && (
-                            <span>· {new Date(notif.createdAt).toLocaleDateString()}</span>
-                          )}
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Navigation Links */}
-        <nav className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
-          {userRole === "1" && (
-            <>
-              <Link to="/" className="nav-item">
-                <span>Home</span>
-              </Link>
-              <Link to="/user-profile" className="nav-item">
-                <span>Profile</span>
-              </Link>
-              <Link to="/user-request" className="nav-item">
-                <span>Requests</span>
-              </Link>
-              <Link to="/volunteer-opportunities" className="nav-item">
-                <span>Opportunities</span>
-              </Link>
-              <Link to="/contact" className="nav-item">
-                <span>Contact</span>
-              </Link>
-            </>
-          )}
-
-          {userRole === "2" && (
-            <>
-              <Link to="/volunteer-home" className="nav-item">
-                <span>Dashboard</span>
-              </Link>
-              <Link to="/volunteer-opportunities" className="nav-item">
-                <span>Opportunities</span>
-              </Link>
-              <Link to="/user-profile" className="nav-item">
-                <span>Profile</span>
-              </Link>
-              <Link to="/contact" className="nav-item">
-                <span>Contact</span>
-              </Link>
-            </>
-          )}
-
-          {userRole === "0" && (
-            <>
-              <Link to="/admin-dashboard" className="nav-item">
-                <span>Dashboard</span>
-              </Link>
-              <Link to="/volunteer-opportunities" className="nav-item">
-                <span>Manage Ops</span>
-              </Link>
-              <Link to="/user-profile" className="nav-item">
-                <span>Profile</span>
-              </Link>
-            </>
-          )}
-          {/* Logout Button */}
-          <center>
-            <button onClick={handleLogout} className="nav-item logout-btn">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-              </svg>
-              <span>Logout</span>
+        {session && (
+          <nav className={`topbar__nav ${menuOpen ? "is-open" : ""}`} aria-label="Main">
+            {links.map((l) => (
+              <NavLink key={l.to} to={l.to} end={l.end} className="topbar__link">
+                {l.label}
+              </NavLink>
+            ))}
+            <NavLink to="/user-profile" className="topbar__link topbar__link--mobile">
+              Profile
+            </NavLink>
+            <button type="button" className="topbar__link topbar__link--mobile" onClick={handleLogout}>
+              Log out
             </button>
-          </center>
-        </nav>
+          </nav>
+        )}
 
-        {/* Mobile Menu Toggle Button */}
-        <button 
-          className="menu-toggle" 
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          aria-label="Toggle navigation"
-        >
-          {isMenuOpen ? '✕' : '☰'}
-        </button>
+        <div className="topbar__actions">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={toggleTheme}
+            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            title={theme === "light" ? "Dark mode" : "Light mode"}
+          >
+            {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+
+          {session ? (
+            <>
+              <div className="notif" ref={notifRef}>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => setNotifOpen((o) => !o)}
+                  aria-label={`Notifications${unread.length ? `, ${unread.length} unread` : ""}`}
+                  aria-expanded={notifOpen}
+                >
+                  <Bell size={18} />
+                  {unread.length > 0 && <span className="notif__dot">{unread.length > 9 ? "9+" : unread.length}</span>}
+                </button>
+                {notifOpen && (
+                  <div className="notif__panel">
+                    <div className="notif__head">
+                      <strong>Notifications</strong>
+                      {unread.length > 0 && (
+                        <button type="button" className="btn btn--ghost btn--sm" onClick={markAllRead}>
+                          <CheckCheck size={14} /> Mark all read
+                        </button>
+                      )}
+                    </div>
+                    {items.length === 0 ? (
+                      <p className="notif__empty">You're all caught up.</p>
+                    ) : (
+                      <ul className="notif__list">
+                        {items.map((n) => (
+                          <li key={n.key}>
+                            <Link to={n.to} className={`notif__item ${isUnread(n) ? "is-unread" : ""}`}>
+                              <span className="notif__title">{n.title}</span>
+                              <span className="notif__body">{n.body}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <NavLink to="/user-profile" className="user-chip" title="Your profile">
+                <span className="avatar">{initials(session)}</span>
+                <span className="user-chip__text">
+                  <span className="user-chip__name">{session.firstName || "Profile"}</span>
+                  <span className="user-chip__role">{ROLE_LABELS[session.role]}</span>
+                </span>
+              </NavLink>
+
+              <button type="button" className="icon-btn topbar__logout" onClick={handleLogout} aria-label="Log out" title="Log out">
+                <LogOut size={18} />
+              </button>
+
+              <button
+                type="button"
+                className="icon-btn topbar__menu"
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label="Toggle navigation"
+                aria-expanded={menuOpen}
+              >
+                {menuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="btn btn--ghost btn--sm">
+                Log in
+              </Link>
+              <Link to="/register" className="btn btn--primary btn--sm">
+                Join
+              </Link>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );

@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,11 +25,15 @@ public class UserController {
 
     @Autowired
     private UserService userService;
-    
+
+    private static boolean isAdmin(HttpSession session) {
+        Integer role = (Integer) session.getAttribute("role");
+        return role != null && role == 0;
+    }
+
     @GetMapping("/all")
     public ResponseEntity<List<User>> getAllUsers(HttpSession session) {
-        Integer role = (Integer) session.getAttribute("role");
-        if (role == null || role != 0) { // Only admin (role 0) allowed
+        if (!isAdmin(session)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         return ResponseEntity.ok(userService.getAllUsers());
@@ -36,24 +41,35 @@ public class UserController {
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody User user) {
-        User savedUser = userService.registerUser(user);
-        if (savedUser != null) {
-            return ResponseEntity.ok("User registered successfully");
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Registration failed");
+        // Public sign-up may only create residents (1) or volunteers (2); admins are created by hand.
+        if (user.getRole() == null || (user.getRole() != 1 && user.getRole() != 2)) {
+            return ResponseEntity.badRequest().body("Choose whether you're joining as a resident or a volunteer.");
         }
+        if (user.getAge() == null || user.getAge() < 18) {
+            return ResponseEntity.badRequest().body("You must be 18 or older to join.");
+        }
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            return ResponseEntity.badRequest().body("Email is required.");
+        }
+        user.setEmail(user.getEmail().trim().toLowerCase());
+        if (userService.isEmailRegistered(user.getEmail())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("An account with this email already exists. Try logging in.");
+        }
+        user.setId(null);
+        user.setBanned(false);
+        userService.registerUser(user);
+        return ResponseEntity.ok("User registered successfully");
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User loginRequest, HttpSession session) {
         try {
-            User user = userService.authenticate(loginRequest.getEmail(), loginRequest.getPassword());
+            String email = loginRequest.getEmail() == null ? "" : loginRequest.getEmail().trim();
+            User user = userService.authenticate(email, loginRequest.getPassword());
             if (user != null) {
-                // Store user data in session
                 session.setAttribute("userEmail", user.getEmail());
                 session.setAttribute("userId", user.getId());
                 session.setAttribute("role", user.getRole());
-
                 return ResponseEntity.ok(Map.of(
                     "message", "Login successful! Welcome " + user.getFirstName(),
                     "role", user.getRole(),
@@ -64,14 +80,13 @@ public class UserController {
                     "phone", user.getPhoneNo(),
                     "loginStatus", "success"
                 ));
-            } else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                    "message", "Login failed: Invalid email or password.",
-                    "loginStatus", "failed"
-                ));
             }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                "message", "Login failed: Invalid email or password.",
+                "loginStatus", "failed"
+            ));
         } catch (RuntimeException ex) {
-            // Handles the case where the user is banned
+            // Thrown for banned users
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                 "message", ex.getMessage(),
                 "loginStatus", "failed"
@@ -81,7 +96,6 @@ public class UserController {
 
     @PostMapping("/logout")
     public ResponseEntity<String> logout(HttpSession session) {
-        // Invalidate the session to log the user out
         session.invalidate();
         return ResponseEntity.ok("Logged out successfully");
     }
@@ -89,11 +103,9 @@ public class UserController {
     @GetMapping("/email/{email}")
     public ResponseEntity<?> getUserByEmail(@PathVariable String email, HttpSession session) {
         String sessionEmail = (String) session.getAttribute("userEmail");
-
-        if (sessionEmail == null || !sessionEmail.equals(email)) {
+        if (sessionEmail == null || !sessionEmail.equalsIgnoreCase(email)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied.");
         }
-        
         return ResponseEntity.ok(userService.findByEmail(email));
     }
 
@@ -109,46 +121,62 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody User user, HttpSession session) {
         Long sessionUserId = (Long) session.getAttribute("userId");
-
         if (sessionUserId == null || !sessionUserId.equals(id)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied.");
         }
-
+        if (user.getAge() != null && user.getAge() < 18) {
+            return ResponseEntity.badRequest().body("You must be 18 or older.");
+        }
+        if (user.getEmail() != null) {
+            user.setEmail(user.getEmail().trim().toLowerCase());
+            boolean takenBySomeoneElse = userService.findByEmail(user.getEmail())
+                .map(existing -> !existing.getId().equals(id))
+                .orElse(false);
+            if (takenBySomeoneElse) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("That email is already used by another account.");
+            }
+        }
         User updatedUser = userService.updateUser(id, user);
+        // Keep the session in step, otherwise email-based lookups (e.g. joining opportunities) break.
+        session.setAttribute("userEmail", updatedUser.getEmail());
         return ResponseEntity.ok(updatedUser);
     }
 
-    // Ban a user (admin only)
     @PutMapping("/{id}/ban")
     public ResponseEntity<?> banUser(@PathVariable Long id, HttpSession session) {
-        // Check if the logged-in user is an admin (role 0)
-        Integer role = (Integer) session.getAttribute("role");
-        if (role == null || role != 0) {
+        if (!isAdmin(session)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied.");
         }
-        
         try {
-            User updatedUser = userService.banUser(id);
-            return ResponseEntity.ok(updatedUser);
+            return ResponseEntity.ok(userService.banUser(id));
         } catch (RuntimeException ex) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
         }
     }
 
-    // Unban a user (admin only)
     @PutMapping("/{id}/unban")
     public ResponseEntity<?> unbanUser(@PathVariable Long id, HttpSession session) {
-        // Check if the logged-in user is an admin (role 0)
-        Integer role = (Integer) session.getAttribute("role");
-        if (role == null || role != 0) {
+        if (!isAdmin(session)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied.");
         }
-        
         try {
-            User updatedUser = userService.unbanUser(id);
-            return ResponseEntity.ok(updatedUser);
+            return ResponseEntity.ok(userService.unbanUser(id));
         } catch (RuntimeException ex) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+        }
+    }
+
+    // The admin dashboard has always had a Delete button; this is the endpoint it calls.
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id, HttpSession session) {
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied.");
+        }
+        try {
+            userService.deleteUser(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
         }
     }
 }

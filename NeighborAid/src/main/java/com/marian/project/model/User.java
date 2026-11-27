@@ -2,6 +2,7 @@ package com.marian.project.model;
 
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 
@@ -27,6 +28,7 @@ public class User {
     private String email;
 
     @NotBlank(message = "Password cannot be blank")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // accepted on register/login, never returned
     private String password;
 
     @NotNull(message = "Role cannot be null")

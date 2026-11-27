@@ -2,6 +2,7 @@ package com.marian.project.controller;
 
 import com.marian.project.model.Opportunity;
 import com.marian.project.model.Volunteer;
+import com.marian.project.repository.VolunteerRepository;
 import com.marian.project.service.OpportunityService;
 
 import jakarta.servlet.http.HttpSession;
@@ -12,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/opportunities")
@@ -20,18 +23,40 @@ public class OpportunityController {
     @Autowired
     private OpportunityService opportunityService;
 
+    @Autowired
+    private VolunteerRepository volunteerRepository;
+
+    private static boolean isAdmin(HttpSession session) {
+        Integer role = (Integer) session.getAttribute("role");
+        return role != null && role == 0;
+    }
+
     @GetMapping("/available")
     public ResponseEntity<List<Opportunity>> getAvailableOpportunities() {
-        List<Opportunity> availableOpportunities = opportunityService.getAvailableOpportunities();
-        return ResponseEntity.ok(availableOpportunities);
+        return ResponseEntity.ok(opportunityService.getAvailableOpportunities());
     }
+
     @GetMapping("/all")
     public ResponseEntity<List<Opportunity>> getAllOpportunities(HttpSession session) {
-        Integer role = (Integer) session.getAttribute("role");
-        if (role == null || role != 0) { // Only admin allowed
+        if (!isAdmin(session)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         return ResponseEntity.ok(opportunityService.getAllOpportunities());
+    }
+
+    /** Opportunities the logged-in volunteer has joined, including ones that are now full. */
+    @GetMapping("/mine")
+    public ResponseEntity<List<Opportunity>> getMyOpportunities(HttpSession session) {
+        Long userId = (Long) session.getAttribute("userId");
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        List<Opportunity> mine = volunteerRepository.findByUserId(userId).stream()
+                .map(Volunteer::getOpportunity)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(mine);
     }
 
     @GetMapping("/{id}")
@@ -42,27 +67,42 @@ public class OpportunityController {
     }
 
     @PostMapping
-    public ResponseEntity<Opportunity> createOpportunity(@RequestBody Opportunity opportunity) {
-        System.out.println("Received request to create opportunity: " + opportunity);
-        Opportunity createdOpportunity = opportunityService.createOpportunity(opportunity);
-        return ResponseEntity.status(201).body(createdOpportunity);
+    public ResponseEntity<?> createOpportunity(@RequestBody Opportunity opportunity, HttpSession session) {
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can create opportunities.");
+        }
+        opportunity.setId(null);
+        opportunity.setVolunteers(null);
+        return ResponseEntity.status(HttpStatus.CREATED).body(opportunityService.createOpportunity(opportunity));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Opportunity> updateOpportunity(@PathVariable Long id, @RequestBody Opportunity opportunity) {
-        Opportunity updatedOpportunity = opportunityService.updateOpportunity(id, opportunity);
-        return ResponseEntity.ok(updatedOpportunity);
+    public ResponseEntity<?> updateOpportunity(@PathVariable Long id, @RequestBody Opportunity opportunity, HttpSession session) {
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can edit opportunities.");
+        }
+        long joined = volunteerRepository.countByOpportunityId(id);
+        if (opportunity.getVolunteerLimit() == null || opportunity.getVolunteerLimit() < Math.max(1, joined)) {
+            return ResponseEntity.badRequest().body(
+                "The volunteer limit can't be lower than the " + joined + " people who have already joined.");
+        }
+        return ResponseEntity.ok(opportunityService.updateOpportunity(id, opportunity));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteOpportunity(@PathVariable Long id) {
+    public ResponseEntity<?> deleteOpportunity(@PathVariable Long id, HttpSession session) {
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can delete opportunities.");
+        }
         opportunityService.deleteOpportunity(id);
         return ResponseEntity.noContent().build();
     }
-    @GetMapping("/{id}/volunteers")
-    public ResponseEntity<List<Volunteer>> getVolunteersForOpportunity(@PathVariable Long id) {
-        List<Volunteer> volunteers = opportunityService.getVolunteersForOpportunity(id);
-        return ResponseEntity.ok(volunteers);
-    }
 
+    @GetMapping("/{id}/volunteers")
+    public ResponseEntity<List<Volunteer>> getVolunteersForOpportunity(@PathVariable Long id, HttpSession session) {
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok(opportunityService.getVolunteersForOpportunity(id));
+    }
 }

@@ -1,63 +1,50 @@
-// src/main/java/com/marian/project/service/FeedbackService.java
 package com.marian.project.service;
 
 import com.marian.project.model.Feedback;
+import com.marian.project.repository.FeedbackRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.ArrayList;
 import java.util.List;
 
+// Feedback used to live in an in-memory list and vanished on every restart.
+// It is a JPA entity with a repository, so store it in the database like everything else.
 @Service
 public class FeedbackService {
 
-    // Dummy in-memory store
-    private List<Feedback> feedbackList = new ArrayList<>();
+    @Autowired
+    private FeedbackRepository feedbackRepository;
 
     public Feedback createFeedback(Feedback feedback) {
-        // Assume the Feedback entity includes a field for rating
-        feedback.setId((long) (feedbackList.size() + 1));
-        feedbackList.add(feedback);
-        return feedback;
+        feedback.setId(null);
+        return feedbackRepository.save(feedback);
     }
 
-    // Retrieve feedback by volunteerId (i.e. which volunteer the feedback is for)
     public List<Feedback> getFeedbackByVolunteer(Long volunteerId) {
-        List<Feedback> result = new ArrayList<>();
-        for (Feedback fb : feedbackList) {
-            if (fb.getVolunteerId() != null && fb.getVolunteerId().equals(volunteerId)) {
-                result.add(fb);
-            }
-        }
-        return result;
+        return feedbackRepository.findByVolunteerId(volunteerId);
     }
 
     public List<Feedback> getFeedbackByUser(Long userId) {
-        List<Feedback> result = new ArrayList<>();
-        for (Feedback fb : feedbackList) {
-            if (fb.getUserId() != null && fb.getUserId().equals(userId)) {
-                result.add(fb);
-            }
-        }
-        return result;
+        return feedbackRepository.findByUserId(userId);
     }
-    
-    // Retrieve all feedback entries
+
     public List<Feedback> getAllFeedback() {
-        return new ArrayList<>(feedbackList);
+        return feedbackRepository.findAll();
     }
-    
-    // Update feedback with an admin reply
+
     public Feedback updateFeedbackReply(Long id, String reply) {
-        for (Feedback fb : feedbackList) {
-            if (fb.getId().equals(id)) {
-                fb.setReply(reply);
-                return fb;
-            }
-        }
-        return null;
+        return feedbackRepository.findById(id)
+                .map(fb -> {
+                    fb.setReply(reply);
+                    return feedbackRepository.save(fb);
+                })
+                .orElse(null);
     }
-    
-    // Delete feedback by id
+
     public boolean deleteFeedback(Long id) {
-        return feedbackList.removeIf(feedback -> feedback.getId().equals(id));
+        if (!feedbackRepository.existsById(id)) {
+            return false;
+        }
+        feedbackRepository.deleteById(id);
+        return true;
     }
 }

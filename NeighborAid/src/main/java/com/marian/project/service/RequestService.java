@@ -52,8 +52,8 @@ public class RequestService {
         Request request = requestRepository.findById(requestId)
             .orElseThrow(() -> new RuntimeException("Request not found"));
 
-        if (!"PENDING".equals(request.getStatus())) { 
-            throw new RuntimeException("Request is already accepted");
+        if (!"PENDING".equalsIgnoreCase(request.getStatus())) { 
+            throw new RuntimeException("Another volunteer has already accepted this request.");
         }
 
         User volunteer = userRepository.findById(volunteerId)
@@ -72,6 +72,10 @@ public class RequestService {
         // For non-admin users, ensure the request belongs to them.
         if (!request.getUser().getId().equals(userId)) { 
             throw new RuntimeException("You can only delete your own requests");
+        }
+        // Once a volunteer has taken it on, withdrawing would leave them hanging.
+        if (!"PENDING".equalsIgnoreCase(request.getStatus())) {
+            throw new RuntimeException("This request has already been accepted by a volunteer and can't be withdrawn.");
         }
 
         requestRepository.deleteById(requestId);

@@ -1,462 +1,322 @@
-// src/components/Adashboard.js
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import './Adashboard.css';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  CheckCircle2,
+  Clock,
+  HandHeart,
+  Inbox,
+  MessageCircle,
+  PlusCircle,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Star,
+  Users,
+} from "lucide-react";
+import api, { errorMessage } from "../lib/api";
+import { ROLES, ROLE_LABELS } from "../lib/auth";
+import { formatDate, fullName, isPast, normStatus } from "../lib/format";
+import { useSession, useToast } from "../context/AppContext";
+import { Alert, EmptyState, PageHeader, Spinner, StatusBadge, Tabs, UrgencyBadge } from "./ui";
+
+const ROLE_TONE = { [ROLES.ADMIN]: "danger", [ROLES.USER]: "info", [ROLES.VOLUNTEER]: "primary" };
+
+const matches = (q, ...fields) => !q || fields.join(" ").toLowerCase().includes(q);
 
 const Adashboard = () => {
-  // State variables for data
-  const [opportunities, setOpportunities] = useState([]);
-  const [requests, setRequests] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [messages, setMessages] = useState([]);      // Contact messages
-  const [feedbacks, setFeedbacks] = useState([]);      // Volunteer feedback
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState("users");
-  
-  // States for managing reply inputs for contact messages
-  const [replyContact, setReplyContact] = useState({});
-  const [replyContactVisible, setReplyContactVisible] = useState({});
+  const session = useSession();
+  const toast = useToast();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [tab, setTab] = useState("requests");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("");
+  const [replyFor, setReplyFor] = useState(null);
+  const [replyText, setReplyText] = useState("");
+  const [busy, setBusy] = useState(null);
 
-  const navigate = useNavigate();
-  
+  const load = useCallback(async () => {
+    setError("");
+    // Load each list independently so one failing endpoint doesn't blank the whole dashboard.
+    const get = (url) => api.get(url).then((r) => (Array.isArray(r.data) ? r.data : [])).catch(() => null);
+    const [opportunities, requests, users, messages, feedback] = await Promise.all([
+      get("/opportunities/all"),
+      get("/requests/all"),
+      get("/user/all"),
+      get("/contact"),
+      get("/feedback"),
+    ]);
+    if ([opportunities, requests, users, messages, feedback].every((x) => x === null)) {
+      setError("Couldn't load dashboard data. Is the backend running, and are you still logged in?");
+    }
+    setData({
+      opportunities: opportunities || [],
+      requests: requests || [],
+      users: users || [],
+      messages: messages || [],
+      feedback: feedback || [],
+    });
+  }, []);
+
   useEffect(() => {
-    // Check if admin is logged in (role "0")
-    const userId = sessionStorage.getItem("userId");
-    const role = sessionStorage.getItem("role");
-    if (!userId || role !== "0") {
-      navigate("/login");
-      return;
-    }
-    fetchData();
-  }, [navigate]);
-  
-  const fetchData = async () => {
+    load();
+  }, [load]);
+
+  const changeTab = (t) => {
+    setTab(t);
+    setQuery("");
+    setFilter("");
+  };
+
+  const run = async (key, fn, success, update) => {
+    setBusy(key);
     try {
-      setLoading(true);
-      setError("");
-      const [
-        oppRes,
-        reqRes,
-        userRes,
-        contactRes,
-        feedbackRes
-      ] = await Promise.all([
-        axios.get("http://localhost:8080/api/opportunities/all", { withCredentials: true }),
-        axios.get("http://localhost:8080/api/requests/all", { withCredentials: true }),
-        axios.get("http://localhost:8080/api/user/all", { withCredentials: true }),
-        axios.get("http://localhost:8080/api/contact", { withCredentials: true }),
-        axios.get("http://localhost:8080/api/feedback", { withCredentials: true })
-      ]);
-      setOpportunities(oppRes.data);
-      setRequests(reqRes.data);
-      setUsers(userRes.data);
-      setMessages(contactRes.data);
-      setFeedbacks(feedbackRes.data);
+      await fn();
+      setData((d) => update(d));
+      toast(success);
+      return true;
     } catch (err) {
-      console.error("Error fetching admin data:", err);
-      setError("Failed to fetch admin dashboard data.");
+      toast(errorMessage(err), "error");
+      return false;
     } finally {
-      setLoading(false);
+      setBusy(null);
     }
   };
 
-  // --- Ban/Unban Functions ---
-  const banUser = async (userId) => {
-    try {
-      await axios.put(`http://localhost:8080/api/user/${userId}/ban`, {}, { withCredentials: true });
-      setUsers(prevUsers =>
-        prevUsers.map(user => user.id === userId ? { ...user, banned: true } : user)
-      );
-      alert("User banned successfully");
-    } catch (error) {
-      console.error("Error banning user:", error);
-      alert("Failed to ban user");
-    }
+  const setBanned = (u, banned) =>
+    run(
+      `user-${u.id}`,
+      () => api.put(`/user/${u.id}/${banned ? "ban" : "unban"}`),
+      banned ? `${fullName(u)} has been suspended.` : `${fullName(u)} can log in again.`,
+      (d) => ({ ...d, users: d.users.map((x) => (x.id === u.id ? { ...x, banned } : x)) })
+    );
+
+  const deleteUser = (u) =>
+    window.confirm(`Permanently delete ${fullName(u)}'s account? This can't be undone.`) &&
+    run(`user-${u.id}`, () => api.delete(`/user/${u.id}`), "Account deleted.", (d) => ({ ...d, users: d.users.filter((x) => x.id !== u.id) }));
+
+  const deleteRequest = (r) =>
+    window.confirm(`Delete the request "${r.requestType}"?`) &&
+    run(`req-${r.id}`, () => api.delete(`/requests/${r.id}`), "Request deleted.", (d) => ({ ...d, requests: d.requests.filter((x) => x.id !== r.id) }));
+
+  const deleteOpportunity = (o) =>
+    window.confirm(`Delete "${o.name}"? Volunteers who joined will lose their spot.`) &&
+    run(`opp-${o.id}`, () => api.delete(`/opportunities/${o.id}`), "Opportunity deleted.", (d) => ({
+      ...d,
+      opportunities: d.opportunities.filter((x) => x.id !== o.id),
+    }));
+
+  const deleteFeedback = (f) =>
+    window.confirm("Delete this feedback?") &&
+    run(`fb-${f.id}`, () => api.delete(`/feedback/${f.id}`), "Feedback deleted.", (d) => ({ ...d, feedback: d.feedback.filter((x) => x.id !== f.id) }));
+
+  const sendReply = (m) => {
+    const text = replyText.trim();
+    if (!text) return toast("Write a reply first.", "error");
+    run(`msg-${m.id}`, () => api.put(`/contact/${m.id}/reply`, { reply: text }), `Reply sent to ${m.name || m.email}.`, (d) => ({
+      ...d,
+      messages: d.messages.map((x) => (x.id === m.id ? { ...x, reply: text } : x)),
+    })).then((ok) => {
+      if (!ok) return;
+      setReplyFor(null);
+      setReplyText("");
+    });
   };
 
-  const unbanUser = async (userId) => {
-    try {
-      await axios.put(`http://localhost:8080/api/user/${userId}/unban`, {}, { withCredentials: true });
-      setUsers(prevUsers =>
-        prevUsers.map(user => user.id === userId ? { ...user, banned: false } : user)
-      );
-      alert("User unbanned successfully");
-    } catch (error) {
-      console.error("Error unbanning user:", error);
-      alert("Failed to unban user");
-    }
-  };
-  // --- End Ban/Unban Functions ---
+  const stats = useMemo(() => {
+    if (!data) return null;
+    const by = (s) => data.requests.filter((r) => normStatus(r.status) === s).length;
+    const ratings = data.feedback.map((f) => f.rating).filter((n) => typeof n === "number");
+    return {
+      pending: by("PENDING"),
+      accepted: by("ACCEPTED"),
+      completed: by("COMPLETED"),
+      residents: data.users.filter((u) => u.role === ROLES.USER).length,
+      volunteers: data.users.filter((u) => u.role === ROLES.VOLUNTEER).length,
+      upcoming: data.opportunities.filter((o) => !isPast(o.deadline)).length,
+      unanswered: data.messages.filter((m) => !m.reply).length,
+      avgRating: ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : "-",
+    };
+  }, [data]);
 
-  // --- Delete Functions ---
-  const deleteUser = async (userId, userRole) => {
-    if (userRole === 0) return; // Do not delete admin accounts
-    try {
-      await axios.delete(`http://localhost:8080/api/user/${userId}`, { withCredentials: true });
-      setUsers(prev => prev.filter(user => user.id !== userId));
-      alert("User deleted successfully");
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      alert("Failed to delete user");
-    }
-  };
+  const userById = useMemo(() => new Map((data?.users || []).map((u) => [u.id, u])), [data]);
 
-  const deleteRequest = async (requestId) => {
-    try {
-      await axios.delete(`http://localhost:8080/api/requests/${requestId}`, { withCredentials: true });
-      setRequests(prev => prev.filter(request => request.id !== requestId));
-      alert("Request deleted successfully");
-    } catch (error) {
-      console.error("Error deleting request:", error);
-      alert("Failed to delete request");
-    }
-  };
+  if (!data) return <Spinner label="Loading dashboard…" />;
 
-  const deleteOpportunity = async (oppId) => {
-    try {
-      await axios.delete(`http://localhost:8080/api/opportunities/${oppId}`, { withCredentials: true });
-      setOpportunities(prev => prev.filter(o => o.id !== oppId));
-      alert("Opportunity deleted successfully");
-    } catch (error) {
-      console.error("Error deleting opportunity:", error);
-      alert("Failed to delete opportunity");
-    }
-  };
-  // --- End Delete Functions ---
+  const q = query.trim().toLowerCase();
 
-  // --- Reply Function for Contact Messages ---
-  const handleContactReply = async (messageId) => {
-    const replyText = replyContact[messageId];
-    if (!replyText) {
-      alert("Please enter a reply.");
-      return;
-    }
-    try {
-      // Use PUT instead of POST (backend expects PUT)
-      await axios.put(
-        `http://localhost:8080/api/contact/${messageId}/reply`,
-        { reply: replyText },
-        { withCredentials: true }
-      );
-      alert("Reply sent successfully.");
-      setMessages(prev =>
-        prev.map(msg => msg.id === messageId ? { ...msg, reply: replyText } : msg)
-      );
-      setReplyContact(prev => ({ ...prev, [messageId]: "" }));
-      setReplyContactVisible(prev => ({ ...prev, [messageId]: false }));
-    } catch (error) {
-      console.error("Error replying to contact message:", error);
-      alert("Failed to send reply.");
-    }
-  };
-  // --- End Reply Function ---
+  const users = data.users.filter(
+    (u) => (filter === "" || String(u.role) === filter || (filter === "banned" && u.banned)) && matches(q, u.firstName, u.lastName, u.email, u.phoneNo)
+  );
+  const requests = data.requests
+    .filter((r) => (!filter || normStatus(r.status) === filter) && matches(q, r.requestType, r.description, fullName(r.user, ""), fullName(r.volunteer, "")))
+    .sort((a, b) => b.id - a.id);
+  const opportunities = data.opportunities.filter((o) => matches(q, o.name, o.location, o.category));
+  const messages = data.messages
+    .filter((m) => (!filter || (filter === "open" ? !m.reply : !!m.reply)) && matches(q, m.name, m.email, m.subject, m.message))
+    .sort((a, b) => (!a.reply === !b.reply ? b.id - a.id : a.reply ? 1 : -1));
+  const feedback = data.feedback.filter((f) => matches(q, fullName(userById.get(f.volunteerId), ""), f.comment));
 
-  if (loading) {
-    return <div>Loading admin dashboard...</div>;
-  }
-  if (error) {
-    return <div className="error">{error}</div>;
-  }
-  
-  // Dashboard statistics
-  const totalOpportunities = opportunities.length;
-  const totalRequests = requests.length;
-  const pendingRequestsCount = requests.filter(r => r.status === "PENDING").length;
-  const acceptedRequestsCount = requests.filter(r => r.status === "ACCEPTED").length;
-  const completedRequestsCount = requests.filter(r => r.status.toLowerCase() === "completed").length;
-  const totalUsers = users.length;
-
-  // Helper: Get volunteer name from users array by volunteerId
-  const getVolunteerName = (volunteerId) => {
-    const volunteer = users.find(u => u.id === volunteerId);
-    return volunteer ? `${volunteer.firstName} ${volunteer.lastName}` : "Unknown Volunteer";
-  };
+  const filterSelect = (options) => (
+    <select className="input" value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Filter">
+      {options.map(([value, label]) => (
+        <option key={value} value={value}>
+          {label}
+        </option>
+      ))}
+    </select>
+  );
 
   return (
-    <div className="admin-page">
-      {/* Persistent Dashboard Header */}
-      <div className="dashboard-header">
-        <h1>Admin Dashboard</h1>
-        <div className="stats">
-          <div className="stat-item">
-          <center><h3>Total Opportunities</h3>
-              <p>{totalOpportunities}</p></center>
-          </div>
-          <div className="stat-item">
-          <center> <h3>Total Requests</h3>
-             <p>{totalRequests}</p></center>
-          </div>
-          <div className="stat-item">
-          <center><h3>Pending Requests</h3>
-             <p>{pendingRequestsCount}</p></center>
-          </div>
-          <div className="stat-item">
-          <center> <h3>Accepted Requests</h3>
-            <p>{acceptedRequestsCount}</p></center>
-          </div>
-          <div className="stat-item">
-          <center> <h3>Completed Requests</h3>
-           <p>{completedRequestsCount}</p></center>
-          </div>
-          <div className="stat-item">
-          <center> <h3>Total Users</h3>
-            <p>{totalUsers}</p></center>
-          </div>
+    <div className="container page">
+      <PageHeader
+        eyebrow="Admin"
+        title="Community overview"
+        subtitle={`Signed in as ${session.email}.`}
+        actions={
+          <>
+            <button type="button" className="btn" onClick={load}>
+              <RefreshCw size={16} /> Refresh
+            </button>
+            <Link to="/create-opportunity" className="btn btn--primary">
+              <PlusCircle size={16} /> New opportunity
+            </Link>
+          </>
+        }
+      />
+      <Alert onClose={() => setError("")}>{error}</Alert>
+
+      <div className="stats" style={{ marginBottom: 28 }}>
+        <div className="stat">
+          <span className="stat__label">
+            <Clock size={16} /> Waiting for help
+          </span>
+          <span className="stat__value">{stats.pending}</span>
+          <span className="stat__hint">{stats.accepted} in progress</span>
+        </div>
+        <div className="stat">
+          <span className="stat__label">
+            <CheckCircle2 size={16} /> Completed
+          </span>
+          <span className="stat__value">{stats.completed}</span>
+          <span className="stat__hint">of {data.requests.length} requests</span>
+        </div>
+        <div className="stat">
+          <span className="stat__label">
+            <Users size={16} /> Members
+          </span>
+          <span className="stat__value">{data.users.length}</span>
+          <span className="stat__hint">
+            {stats.residents} residents · {stats.volunteers} volunteers
+          </span>
+        </div>
+        <div className="stat">
+          <span className="stat__label">
+            <Sparkles size={16} /> Upcoming projects
+          </span>
+          <span className="stat__value">{stats.upcoming}</span>
+          <span className="stat__hint">{data.opportunities.length} total</span>
+        </div>
+        <div className="stat">
+          <span className="stat__label">
+            <MessageCircle size={16} /> Unanswered
+          </span>
+          <span className="stat__value">{stats.unanswered}</span>
+          <span className="stat__hint">contact messages</span>
+        </div>
+        <div className="stat">
+          <span className="stat__label">
+            <Star size={16} /> Avg. rating
+          </span>
+          <span className="stat__value">{stats.avgRating}</span>
+          <span className="stat__hint">{data.feedback.length} reviews</span>
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="tabs">
-        <button onClick={() => setActiveTab("users")} className={activeTab === "users" ? "active" : ""}>
-          Users
-        </button>
-        <button onClick={() => setActiveTab("requests")} className={activeTab === "requests" ? "active" : ""}>
-          Requests
-        </button>
-        <button onClick={() => setActiveTab("opportunities")} className={activeTab === "opportunities" ? "active" : ""}>
-          Opportunities
-        </button>
-        <button onClick={() => setActiveTab("contacts")} className={activeTab === "contacts" ? "active" : ""}>
-          Contact Messages
-        </button>
-        <button onClick={() => setActiveTab("feedback")} className={activeTab === "feedback" ? "active" : ""}>
-          Volunteer Feedback
-        </button>
+      <div className="toolbar">
+        <Tabs
+          label="Admin sections"
+          active={tab}
+          onChange={changeTab}
+          tabs={[
+            { id: "requests", label: "Requests", count: data.requests.length },
+            { id: "users", label: "Members", count: data.users.length },
+            { id: "opportunities", label: "Opportunities", count: data.opportunities.length },
+            { id: "messages", label: "Messages", count: stats.unanswered || undefined },
+            { id: "feedback", label: "Feedback", count: data.feedback.length },
+          ]}
+        />
+        <div className="toolbar__filters">
+          <label className="search">
+            <Search size={16} />
+            <span className="sr-only">Search</span>
+            <input className="input" placeholder="Search…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          </label>
+          {tab === "requests" &&
+            filterSelect([
+              ["", "All statuses"],
+              ["PENDING", "Pending"],
+              ["ACCEPTED", "Accepted"],
+              ["COMPLETED", "Completed"],
+            ])}
+          {tab === "users" &&
+            filterSelect([
+              ["", "All members"],
+              [String(ROLES.USER), "Residents"],
+              [String(ROLES.VOLUNTEER), "Volunteers"],
+              [String(ROLES.ADMIN), "Admins"],
+              ["banned", "Suspended"],
+            ])}
+          {tab === "messages" &&
+            filterSelect([
+              ["", "All messages"],
+              ["open", "Needs reply"],
+              ["done", "Replied"],
+            ])}
+        </div>
       </div>
 
-      {/* Tab Content */}
-      <div className="tab-content">
-        {activeTab === "users" && (
-          <div className="users-tab">
-            <h2>Users</h2>
-            <table>
+      {tab === "requests" &&
+        (requests.length === 0 ? (
+          <EmptyState icon={Inbox} title="No requests found" />
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>First Name</th>
-                  <th>Last Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Age</th>
-                  <th>Phone No</th>
-                  <th>House No</th>
-                  <th>Banned</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(user => (
-                  <tr key={user.id}>
-                    <td>{user.id}</td>
-                    <td>{user.firstName}</td>
-                    <td>{user.lastName}</td>
-                    <td>{user.email}</td>
-                    <td>{user.role}</td>
-                    <td>{user.age}</td>
-                    <td>{user.phoneNo}</td>
-                    <td>{user.houseNo}</td>
-                    <td>{user.banned ? "Yes" : "No"}</td>
-                    <td>
-                      {user.role !== 0 && (
-                        <>
-                          {user.banned ? (
-                            <button onClick={() => unbanUser(user.id)}>Unban</button>
-                          ) : (
-                            <button onClick={() => banUser(user.id)}>Ban</button>
-                          )}
-                          <button onClick={() => deleteUser(user.id, user.role)}>Delete</button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === "requests" && (
-          <div className="requests-tab">
-            <h2>Requests</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Type</th>
-                  <th>Description</th>
-                  <th>Deadline</th>
-                  <th>Urgency</th>
-                  <th>Phone No</th>
-                  <th>House No</th>
+                  <th>Request</th>
                   <th>Status</th>
-                  <th>Posted By</th>
-                  <th>Accepted By</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map(request => (
-                  <tr key={request.id}>
-                    <td>{request.id}</td>
-                    <td>{request.requestType}</td>
-                    <td>{request.description}</td>
-                    <td>{request.deadline ? new Date(request.deadline).toLocaleDateString() : "N/A"}</td>
-                    <td>{request.urgency}</td>
-                    <td>{request.phoneNumber}</td>
-                    <td>{request.houseNo}</td>
-                    <td>{request.status}</td>
-                    <td>{request.user ? `${request.user.firstName} ${request.user.lastName}` : "N/A"}</td>
-                    <td>{request.volunteer ? `${request.volunteer.firstName} ${request.volunteer.lastName}` : "Not accepted"}</td>
-                    <td>
-                      <button onClick={() => deleteRequest(request.id)}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === "opportunities" && (
-          <div className="opportunities-tab">
-            <h2>Opportunities</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Description</th>
-                  <th>Category</th>
-                  <th>Location</th>
-                  <th>Deadline</th>
-                  <th>Volunteer Limit</th>
-                  <th>Volunteers Joined</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {opportunities.map(opportunity => (
-                  <tr key={opportunity.id}>
-                    <td>{opportunity.id}</td>
-                    <td>{opportunity.name}</td>
-                    <td>{opportunity.description}</td>
-                    <td>{opportunity.category}</td>
-                    <td>{opportunity.location}</td>
-                    <td>{opportunity.deadline ? new Date(opportunity.deadline).toLocaleDateString() : "N/A"}</td>
-                    <td>{opportunity.volunteerLimit}</td>
-                    <td>
-                      {opportunity.volunteers && opportunity.volunteers.length > 0
-                        ? opportunity.volunteers.map(vol => 
-                            vol.user 
-                              ? `${vol.id} - ${vol.user.firstName} ${vol.user.lastName}`
-                              : `${vol.id}`
-                          ).join(", ")
-                        : "None"}
-                    </td>
-                    <td>
-                      <button onClick={() => deleteOpportunity(opportunity.id)}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === "contacts" && (
-          <div className="messages-tab">
-            <h2>Contact Messages</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Subject</th>
-                  <th>Message</th>
-                  <th>Reply</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {messages.map(msg => (
-                  <tr key={msg.id}>
-                    <td>{msg.id}</td>
-                    <td>{msg.name}</td>
-                    <td>{msg.email}</td>
-                    <td>{msg.subject}</td>
-                    <td>{msg.message}</td>
-                    <td>{msg.reply ? msg.reply : "No reply"}</td>
-                    <td>
-                      <button onClick={() =>
-                        setReplyContactVisible(prev => ({
-                          ...prev,
-                          [msg.id]: !prev[msg.id]
-                        }))
-                      }>
-                        {replyContactVisible[msg.id] ? "Cancel" : "Reply"}
-                      </button>
-                      {replyContactVisible[msg.id] && (
-                        <div>
-                          <textarea
-                            value={replyContact[msg.id] || ""}
-                            onChange={(e) =>
-                              setReplyContact(prev => ({
-                                ...prev,
-                                [msg.id]: e.target.value
-                              }))
-                            }
-                            placeholder="Type your reply here"
-                          />
-                          <button onClick={() => handleContactReply(msg.id)}>
-                            Submit Reply
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === "feedback" && (
-          <div className="messages-tab">
-            <h2>Volunteer Feedback</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
+                  <th>Posted by</th>
                   <th>Volunteer</th>
-                  <th>User ID</th>
-                  <th>Comment</th>
-                  <th>Rating</th>
-                  <th>Actions</th>
+                  <th>Deadline</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
-                {feedbacks.map(fb => (
-                  <tr key={fb.id}>
-                    <td>{fb.id}</td>
-                    <td>{fb.volunteerId} - {getVolunteerName(fb.volunteerId)}</td>
-                    <td>{fb.userId}</td>
-                    <td>{fb.comment}</td>
-                    <td>{fb.rating != null ? fb.rating : "N/A"}</td>
+                {requests.map((r) => (
+                  <tr key={r.id}>
                     <td>
-                      <button onClick={() => {
-                        axios.delete(`http://localhost:8080/api/feedback/${fb.id}`, { withCredentials: true })
-                          .then(() => {
-                            setFeedbacks(prev => prev.filter(item => item.id !== fb.id));
-                            alert("Feedback deleted successfully");
-                          })
-                          .catch(error => {
-                            console.error("Error deleting feedback:", error);
-                            alert("Failed to delete feedback");
-                          });
-                      }}>
+                      <div className="cell-main">{r.requestType}</div>
+                      <div className="cell-sub">
+                        #{r.id} · {r.category} · House {r.houseNo}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="badges">
+                        <StatusBadge status={r.status} />
+                        {normStatus(r.status) === "PENDING" && <UrgencyBadge urgency={r.urgency} />}
+                      </div>
+                    </td>
+                    <td>
+                      <div>{fullName(r.user, "-")}</div>
+                      <div className="cell-sub">{r.phoneNumber}</div>
+                    </td>
+                    <td>{r.volunteer ? fullName(r.volunteer) : <span className="muted">-</span>}</td>
+                    <td>
+                      <span className={normStatus(r.status) !== "COMPLETED" && isPast(r.deadline) ? "text-danger" : ""}>{formatDate(r.deadline)}</span>
+                    </td>
+                    <td className="cell-actions">
+                      <button type="button" className="btn btn--danger btn--sm" onClick={() => deleteRequest(r)} disabled={busy === `req-${r.id}`}>
                         Delete
                       </button>
                     </td>
@@ -465,8 +325,225 @@ const Adashboard = () => {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        ))}
+
+      {tab === "users" &&
+        (users.length === 0 ? (
+          <EmptyState icon={Users} title="No members found" />
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Member</th>
+                  <th>Role</th>
+                  <th>Contact</th>
+                  <th>House</th>
+                  <th>Status</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u) => {
+                  const isSelf = String(u.id) === String(session.userId);
+                  return (
+                    <tr key={u.id}>
+                      <td>
+                        <div className="cell-main">{fullName(u)}</div>
+                        <div className="cell-sub">
+                          #{u.id} · Age {u.age ?? "-"}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`badge badge--${ROLE_TONE[u.role] || "neutral"}`}>{ROLE_LABELS[u.role] ?? u.role}</span>
+                      </td>
+                      <td>
+                        <div>{u.email}</div>
+                        <div className="cell-sub">{u.phoneNo}</div>
+                      </td>
+                      <td>{u.houseNo}</td>
+                      <td>{u.banned ? <span className="badge badge--danger">Suspended</span> : <span className="badge badge--success">Active</span>}</td>
+                      <td className="cell-actions">
+                        {u.role !== ROLES.ADMIN && !isSelf && (
+                          <>
+                            <button type="button" className="btn btn--sm" onClick={() => setBanned(u, !u.banned)} disabled={busy === `user-${u.id}`}>
+                              {u.banned ? "Reinstate" : "Suspend"}
+                            </button>
+                            <button type="button" className="btn btn--danger btn--sm" onClick={() => deleteUser(u)} disabled={busy === `user-${u.id}`}>
+                              Delete
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ))}
+
+      {tab === "opportunities" &&
+        (opportunities.length === 0 ? (
+          <EmptyState
+            icon={Sparkles}
+            title="No opportunities"
+            action={
+              <Link to="/create-opportunity" className="btn btn--primary btn--sm">
+                Create one
+              </Link>
+            }
+          />
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Opportunity</th>
+                  <th>Date</th>
+                  <th>Volunteers</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {opportunities.map((o) => (
+                  <tr key={o.id}>
+                    <td>
+                      <div className="cell-main">{o.name}</div>
+                      <div className="cell-sub">
+                        {o.category} · {o.location}
+                      </div>
+                    </td>
+                    <td>
+                      {formatDate(o.deadline)}
+                      {isPast(o.deadline) && <div className="cell-sub">Past</div>}
+                    </td>
+                    <td>
+                      <strong>
+                        {o.volunteers?.length || 0}/{o.volunteerLimit}
+                      </strong>
+                      {o.volunteers?.length > 0 && <div className="cell-sub cell-clip">{o.volunteers.map((v) => fullName(v.user)).join(", ")}</div>}
+                    </td>
+                    <td className="cell-actions">
+                      <Link to={`/edit-opportunity/${o.id}`} className="btn btn--sm">
+                        Edit
+                      </Link>
+                      <button type="button" className="btn btn--danger btn--sm" onClick={() => deleteOpportunity(o)} disabled={busy === `opp-${o.id}`}>
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+
+      {tab === "messages" &&
+        (messages.length === 0 ? (
+          <EmptyState icon={MessageCircle} title="No messages" />
+        ) : (
+          <ul className="thread-list">
+            {messages.map((m) => (
+              <li key={m.id} className="thread">
+                <div className="row row--between">
+                  <div>
+                    <strong>{m.subject}</strong>
+                    <div className="cell-sub">
+                      {m.name} · {m.email}
+                    </div>
+                  </div>
+                  {m.reply ? <span className="badge badge--success">Replied</span> : <span className="badge badge--warning">Needs reply</span>}
+                </div>
+                <p className="thread__msg">{m.message}</p>
+                {m.reply && replyFor !== m.id && (
+                  <div className="thread__reply">
+                    <span className="thread__from">Your reply</span>
+                    <p>{m.reply}</p>
+                  </div>
+                )}
+                {replyFor === m.id ? (
+                  <div className="stack" style={{ gap: 10 }}>
+                    <textarea
+                      className="input"
+                      style={{ height: "auto", padding: 12 }}
+                      rows={3}
+                      autoFocus
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder={`Reply to ${m.name || m.email}…`}
+                    />
+                    <div className="form-actions">
+                      <button type="button" className="btn btn--ghost btn--sm" onClick={() => setReplyFor(null)}>
+                        Cancel
+                      </button>
+                      <button type="button" className="btn btn--primary btn--sm" onClick={() => sendReply(m)} disabled={busy === `msg-${m.id}`}>
+                        {busy === `msg-${m.id}` ? "Sending…" : "Send reply"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      className="btn btn--sm"
+                      onClick={() => {
+                        setReplyFor(m.id);
+                        setReplyText(m.reply || "");
+                      }}
+                    >
+                      {m.reply ? "Edit reply" : "Reply"}
+                    </button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        ))}
+
+      {tab === "feedback" &&
+        (feedback.length === 0 ? (
+          <EmptyState icon={Star} title="No feedback yet">
+            Residents can rate volunteers after a request is completed.
+          </EmptyState>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Volunteer</th>
+                  <th>Rating</th>
+                  <th>Comment</th>
+                  <th>From</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {feedback.map((f) => (
+                  <tr key={f.id}>
+                    <td className="cell-main">
+                      <HandHeart size={14} style={{ verticalAlign: "-2px", marginRight: 6 }} />
+                      {fullName(userById.get(f.volunteerId), `Volunteer #${f.volunteerId}`)}
+                    </td>
+                    <td>
+                      <span className="stars--static" aria-label={`${f.rating} out of 5`}>
+                        {"★".repeat(f.rating || 0)}
+                        <span className="muted">{"★".repeat(5 - (f.rating || 0))}</span>
+                      </span>
+                    </td>
+                    <td className="cell-clip">{f.comment}</td>
+                    <td>{fullName(userById.get(f.userId), `#${f.userId}`)}</td>
+                    <td className="cell-actions">
+                      <button type="button" className="btn btn--danger btn--sm" onClick={() => deleteFeedback(f)} disabled={busy === `fb-${f.id}`}>
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
     </div>
   );
 };

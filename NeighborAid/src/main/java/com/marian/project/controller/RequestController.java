@@ -45,12 +45,21 @@ public class RequestController {
 
     // Accept a request (for volunteers)
     @PutMapping("/{requestId}/accept")
-    public ResponseEntity<Request> acceptRequest(@PathVariable Long requestId, HttpSession session) {
+    public ResponseEntity<?> acceptRequest(@PathVariable Long requestId, HttpSession session) {
         Long volunteerId = (Long) session.getAttribute("userId");
+        Integer role = (Integer) session.getAttribute("role");
         if (volunteerId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return ResponseEntity.ok(requestService.acceptRequest(requestId, volunteerId));
+        if (role == null || role != 2) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only volunteers can accept requests.");
+        }
+        try {
+            return ResponseEntity.ok(requestService.acceptRequest(requestId, volunteerId));
+        } catch (RuntimeException e) {
+            // Usually another volunteer got there first.
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        }
     }
 
     // Get accepted requests (for volunteers)
@@ -72,6 +81,10 @@ public class RequestController {
         }
 
         try {
+            // Status and volunteer are server-controlled; ignore whatever the client sent.
+            request.setId(null);
+            request.setStatus("PENDING");
+            request.setVolunteer(null);
             Request savedRequest = requestService.saveRequest(request, userId);
             return ResponseEntity.status(HttpStatus.CREATED).body(savedRequest);
         } catch (RuntimeException e) {
@@ -90,7 +103,7 @@ public class RequestController {
     }
 
     @PutMapping("/{requestId}/complete")
-    public ResponseEntity<Request> markComplete(@PathVariable Long requestId, HttpSession session) {
+    public ResponseEntity<?> markComplete(@PathVariable Long requestId, HttpSession session) {
         Long volunteerId = (Long) session.getAttribute("userId");
         if (volunteerId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -99,7 +112,7 @@ public class RequestController {
             Request updatedRequest = requestService.markComplete(requestId, volunteerId);
             return ResponseEntity.ok(updatedRequest);
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         }
     }
 
@@ -115,7 +128,7 @@ public class RequestController {
 
     // Delete a request (admin or user)
     @DeleteMapping("/{requestId}")
-    public ResponseEntity<Void> deleteRequest(@PathVariable Long requestId, HttpSession session) {
+    public ResponseEntity<?> deleteRequest(@PathVariable Long requestId, HttpSession session) {
         Long userId = (Long) session.getAttribute("userId");
         Integer role = (Integer) session.getAttribute("role");
         if (userId == null) {
@@ -131,7 +144,7 @@ public class RequestController {
             }
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         }
     }
 }

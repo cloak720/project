@@ -1,109 +1,187 @@
-// src/components/SubmissionDetails.js
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import "./SubmissionDetails.css";
+// "My requests": everything the logged-in resident has posted.
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { CalendarClock, Home as HomeIcon, Inbox, Phone, PlusCircle, Star, User } from "lucide-react";
+import api, { errorMessage } from "../lib/api";
+import { formatDateTime, fullName, isPast, normStatus, relativeDays } from "../lib/format";
+import { useToast } from "../context/AppContext";
+import { Alert, EmptyState, PageHeader, Spinner, StatusBadge, Tabs, UrgencyBadge } from "./ui";
+
+const FILTERS = [
+  { id: "ALL", label: "All" },
+  { id: "PENDING", label: "Waiting" },
+  { id: "ACCEPTED", label: "In progress" },
+  { id: "COMPLETED", label: "Completed" },
+];
+
+const STATUS_ORDER = { ACCEPTED: 0, PENDING: 1, COMPLETED: 2 };
 
 const SubmissionDetails = () => {
-  const [requests, setRequests] = useState([]);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
-  const userId = sessionStorage.getItem("userId");
+  const toast = useToast();
+  const [params] = useSearchParams();
+  const highlight = params.get("highlight");
+  const [requests, setRequests] = useState(null);
+  const [error, setError] = useState("");
+  const [filter, setFilter] = useState("ALL");
+  const [busyId, setBusyId] = useState(null);
 
   useEffect(() => {
-    if (!userId) {
-      setErrorMessage("User not logged in. Redirecting to login...");
-      setTimeout(() => navigate("/login"), 2000);
-      return;
-    }
-
-    const fetchRequests = async () => {
-      try {
-        const response = await axios.get(
-          "http://localhost:8080/api/requests/user",
-          { withCredentials: true }
-        );
-        console.log("API Response:", response.data);
-        setRequests(response.data);
-      } catch (error) {
-        setErrorMessage("Failed to fetch request details.");
-        console.error("Error fetching request details:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRequests();
-  }, [userId, navigate]);
-
-  const handleCancelRequest = async (requestId) => {
-    try {
-      await axios.delete(`http://localhost:8080/api/requests/${requestId}`, {
-        withCredentials: true,
+    api
+      .get("/requests/user")
+      .then((r) => setRequests(Array.isArray(r.data) ? r.data : []))
+      .catch((err) => {
+        setError(errorMessage(err, "Couldn't load your requests."));
+        setRequests([]);
       });
-      setRequests((prevRequests) =>
-        prevRequests.filter((request) => request.id !== requestId)
-      );
-    } catch (error) {
-      setErrorMessage("Failed to cancel request.");
-      console.error("Error deleting request:", error);
+  }, []);
+
+  useEffect(() => {
+    if (highlight && requests?.length) {
+      document.getElementById(`request-${highlight}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlight, requests]);
+
+  const counts = useMemo(() => {
+    const c = { ALL: 0, PENDING: 0, ACCEPTED: 0, COMPLETED: 0 };
+    (requests || []).forEach((r) => {
+      c.ALL++;
+      c[normStatus(r.status)] = (c[normStatus(r.status)] || 0) + 1;
+    });
+    return c;
+  }, [requests]);
+
+  const visible = useMemo(
+    () =>
+      (requests || [])
+        .filter((r) => filter === "ALL" || normStatus(r.status) === filter)
+        .sort(
+          (a, b) =>
+            (STATUS_ORDER[normStatus(a.status)] ?? 3) - (STATUS_ORDER[normStatus(b.status)] ?? 3) ||
+            new Date(a.deadline) - new Date(b.deadline)
+        ),
+    [requests, filter]
+  );
+
+  // Only requests nobody has taken yet can be withdrawn; after that a volunteer is relying on them.
+  const handleCancel = async (r) => {
+    if (!window.confirm(`Withdraw "${r.requestType}"? Volunteers will no longer see it.`)) return;
+    setBusyId(r.id);
+    try {
+      await api.delete(`/requests/${r.id}`);
+      setRequests((list) => list.filter((x) => x.id !== r.id));
+      toast("Request withdrawn.");
+    } catch (err) {
+      toast(errorMessage(err, "Couldn't withdraw this request."), "error");
+    } finally {
+      setBusyId(null);
     }
   };
 
-  if (loading) {
-    return <div className="loading">Loading your requests...</div>;
-  }
-
   return (
-    <div className="submission-details">
-      <h2>Your Requests</h2>
-      {errorMessage && <p className="error">{errorMessage}</p>}
-      {requests.length === 0 ? (
-        <p>No requests found.</p>
+    <div className="container page">
+      <PageHeader
+        title="My requests"
+        subtitle="Track who's helping and what's still waiting for a volunteer."
+        actions={
+          <Link to="/user-request" className="btn btn--primary">
+            <PlusCircle size={18} /> New request
+          </Link>
+        }
+      />
+      <Alert>{error}</Alert>
+
+      {requests === null ? (
+        <Spinner label="Loading your requests…" />
+      ) : requests.length === 0 ? (
+        <EmptyState
+          icon={Inbox}
+          title="You haven't asked for help yet"
+          action={
+            <Link to="/user-request" className="btn btn--primary btn--sm">
+              Post your first request
+            </Link>
+          }
+        >
+          When you post a request, you can follow its progress here.
+        </EmptyState>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Request Type</th>
-              <th>Description</th>
-              <th>Deadline</th>
-              <th>House No</th>
-              <th>Status</th>
-              <th>Accepted By</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {requests.map((request) => (
-              <tr key={request.id}>
-                <td>{request.requestType}</td>
-                <td>{request.description}</td>
-                <td>
-                  {request.deadline
-                    ? new Date(request.deadline).toLocaleString()
-                    : "Not specified"}
-                </td>
-                <td>{request.houseNo}</td>
-                <td>{request.status || "Pending"}</td>
-                <td>
-                  {request.volunteer
-                    ? `${request.volunteer.id}, ${request.volunteer.firstName} ${request.volunteer.lastName}`
-                    : "Not accepted"}
-                </td>
-                <td>
-                  <button
-                    onClick={() => handleCancelRequest(request.id)}
-                    className="cancel-btn"
+        <>
+          <div className="toolbar">
+            <Tabs
+              label="Filter by status"
+              tabs={FILTERS.map((f) => ({ ...f, count: counts[f.id] }))}
+              active={filter}
+              onChange={setFilter}
+            />
+          </div>
+          {visible.length === 0 ? (
+            <EmptyState icon={Inbox} title="Nothing here">
+              No requests with this status.
+            </EmptyState>
+          ) : (
+            <div className="grid">
+              {visible.map((r) => {
+                const status = normStatus(r.status);
+                const overdue = status !== "COMPLETED" && isPast(r.deadline);
+                return (
+                  <article
+                    key={r.id}
+                    id={`request-${r.id}`}
+                    className={`item-card ${String(r.id) === highlight ? "item-card--highlight" : ""}`}
                   >
-                    Cancel
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    <div className="item-card__head">
+                      <h3>{r.requestType}</h3>
+                      <StatusBadge status={r.status} />
+                    </div>
+                    <p className="item-card__desc">{r.description}</p>
+                    <div className="badges">
+                      <span className="badge">{r.category}</span>
+                      <UrgencyBadge urgency={r.urgency} />
+                      {overdue && <span className="badge badge--danger">Past deadline</span>}
+                    </div>
+                    <div className="meta meta--list">
+                      <span>
+                        <CalendarClock size={14} /> {formatDateTime(r.deadline)} · {relativeDays(r.deadline)}
+                      </span>
+                      <span>
+                        <HomeIcon size={14} /> House {r.houseNo}
+                      </span>
+                      <span>
+                        <Phone size={14} /> {r.phoneNumber}
+                      </span>
+                    </div>
+
+                    <div className="item-card__foot">
+                      {r.volunteer ? (
+                        <span className="helper">
+                          <User size={14} /> {status === "COMPLETED" ? "Helped by" : "Accepted by"}{" "}
+                          <strong>{fullName(r.volunteer)}</strong>
+                        </span>
+                      ) : (
+                        <span className="muted small">Waiting for a volunteer</span>
+                      )}
+                      {status === "PENDING" && (
+                        <button
+                          type="button"
+                          className="btn btn--danger btn--sm"
+                          onClick={() => handleCancel(r)}
+                          disabled={busyId === r.id}
+                        >
+                          {busyId === r.id ? "Withdrawing…" : "Withdraw"}
+                        </button>
+                      )}
+                      {status === "COMPLETED" && r.volunteer && (
+                        <Link to={`/contact?tab=feedback&volunteer=${r.volunteer.id}`} className="btn btn--sm">
+                          <Star size={14} /> Rate volunteer
+                        </Link>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

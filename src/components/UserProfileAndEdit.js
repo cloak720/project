@@ -1,173 +1,173 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import "./UserProfileAndEdit.css";
+import React, { useEffect, useState } from "react";
+import { Cake, Home as HomeIcon, Mail, Pencil, Phone, ShieldCheck } from "lucide-react";
+import api, { errorMessage } from "../lib/api";
+import { ROLE_LABELS, updateSession } from "../lib/auth";
+import { fullName, initials } from "../lib/format";
+import { validate, MIN_AGE } from "../lib/validation";
+import { useSession, useToast } from "../context/AppContext";
+import { Alert, Field, PageHeader, Spinner } from "./ui";
+
+const FIELDS = ["firstName", "lastName", "email", "phoneNo", "age", "houseNo"];
 
 const UserProfileAndEdit = () => {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    phoneNo: '',
-    age: '',
-    houseNo: '',
-    email: '',
-    role: 1 // Default role set to 1 (user)
-  });
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [error, setError] = useState('');
+  const session = useSession();
+  const toast = useToast();
+  const [profile, setProfile] = useState(null);
+  const [form, setForm] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      const userId = sessionStorage.getItem('userId'); // Get userId from sessionStorage
-      console.log('Fetched userId:', userId);  // Log to check if the userId is correct
+    api
+      .get(`/user/${session.userId}`)
+      .then(({ data }) => setProfile(data))
+      .catch((err) => setLoadError(errorMessage(err, "Couldn't load your profile.")));
+  }, [session.userId]);
 
-      if (!userId) {
-        setError('User ID not found. Please log in again.');
-        return;
-      }
+  const startEdit = () => {
+    setForm({
+      firstName: profile.firstName || "",
+      lastName: profile.lastName || "",
+      email: profile.email || "",
+      phoneNo: profile.phoneNo || "",
+      age: profile.age ?? "",
+      houseNo: profile.houseNo || "",
+    });
+    setErrors({});
+    setSaveError("");
+    setEditing(true);
+  };
 
-      try {
-        console.log(`Making API call to: http://localhost:8080/api/user/${userId}`); // Log the request URL
-        const response = await axios.get(`http://localhost:8080/api/user/${userId}`, {
-          withCredentials: true
-        });
-        console.log('API response:', response); // Log the API response for debugging
-        if (response.status === 200) {
-          setFormData({
-            firstName: response.data.firstName,
-            lastName: response.data.lastName,
-            phoneNo: response.data.phoneNo,
-            age: response.data.age,
-            houseNo: response.data.houseNo,
-            email: response.data.email,
-            role: response.data.role
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        setError('There was an error fetching user data.');
-      }
-    };
-
-    fetchUserData();
-  }, []);  // The empty dependency array ensures this effect runs once on component mount
-  
-  const handleInputChange = (e) => {
+  const set = (e) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value
-    }));
+    setForm((f) => ({ ...f, [name]: value }));
+    if (errors[name]) setErrors((er) => ({ ...er, [name]: "" }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const userId = sessionStorage.getItem('userId'); // Get userId from sessionStorage
-    if (!userId) {
-      setError('User ID not found. Please log in again.');
-      return;
-    }
-
+    const er = validate(form, FIELDS);
+    setErrors(er);
+    if (Object.keys(er).length) return;
+    setSaving(true);
+    setSaveError("");
     try {
-      // Ensure role is an integer before sending it to the backend
-      const updatedData = {
-        ...formData,
-        role: parseInt(formData.role, 10)
-      };
-
-      const response = await axios.put(
-        `http://localhost:8080/api/user/${userId}`,
-        updatedData,
-        {
-          withCredentials: true,
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      // Check if the update was successful
-      if (response.status === 200) {
-        alert('User updated successfully');
-        setIsEditing(false);
-      }
-    } catch (error) {
-      console.error('Error updating user:', error);
-      setError('There was an error updating the user.');
+      // Role is deliberately not sent: people can't change their own role.
+      const { data } = await api.put(`/user/${session.userId}`, {
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim().toLowerCase(),
+        phoneNo: form.phoneNo.replace(/[\s-]/g, ""),
+        age: Number(form.age),
+        houseNo: form.houseNo.trim(),
+      });
+      const updated = data && typeof data === "object" ? data : { ...profile, ...form };
+      setProfile(updated);
+      updateSession({ firstName: updated.firstName, lastName: updated.lastName, email: updated.email });
+      setEditing(false);
+      toast("Profile updated.");
+    } catch (err) {
+      setSaveError(errorMessage(err, "Couldn't save your changes."));
+    } finally {
+      setSaving(false);
     }
   };
 
-  return (
-    <div className="user-profile-container">
-      <h1>User Profile</h1>
-      {error && <p className="error-message">{error}</p>}
-      <div className="profile-details">
-        <p><strong>First Name:</strong> {formData.firstName}</p>
-        <p><strong>Last Name:</strong> {formData.lastName}</p>
-        <p><strong>Phone Number:</strong> {formData.phoneNo}</p>
-        <p><strong>Age:</strong> {formData.age}</p>
-        <p><strong>House Number:</strong> {formData.houseNo}</p>
-        <p><strong>Email:</strong> {formData.email}</p>
-        <p><strong>Role:</strong> {formData.role === 0 ? 'Admin' : formData.role === 1 ? 'User' : 'Volunteer'}</p>
+  if (loadError) {
+    return (
+      <div className="container page page--narrow">
+        <Alert>{loadError}</Alert>
       </div>
+    );
+  }
+  if (!profile) return <Spinner label="Loading your profile…" />;
 
-      <button className="edit-button" onClick={() => setIsEditing(true)}>Edit Details</button>
+  const input = (name, props = {}) => <input id={name} name={name} value={form[name]} onChange={set} {...props} />;
 
-      {isEditing && (
-        <form className="edit-form" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="firstName"
-            placeholder="First Name"
-            value={formData.firstName}
-            onChange={handleInputChange}
-            required
-          />
-          <input
-            type="text"
-            name="lastName"
-            placeholder="Last Name"
-            value={formData.lastName}
-            onChange={handleInputChange}
-            required
-          />
-          <input
-            type="text"
-            name="phoneNo"
-            placeholder="Phone Number"
-            value={formData.phoneNo}
-            onChange={handleInputChange}
-            required
-          />
-          <input
-            type="number"
-            name="age"
-            placeholder="Age"
-            value={formData.age}
-            onChange={handleInputChange}
-            required
-          />
-          <input
-            type="text"
-            name="houseNo"
-            placeholder="House Number"
-            value={formData.houseNo}
-            onChange={handleInputChange}
-            required
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleInputChange}
-            required
-          />
-          
-          <button type="submit" className="save-button">Save Changes</button>
-          <button type="button" className="cancel-button" onClick={() => setIsEditing(false)}>Cancel</button>
-        </form>
-      )}
+  return (
+    <div className="container page page--narrow">
+      <PageHeader title="Your profile" subtitle="This is what volunteers and organisers see when you work together." />
+
+      <section className="card card--pad-lg profile">
+        <div className="profile__head">
+          <span className="avatar avatar--lg">{initials(profile)}</span>
+          <div>
+            <h2 className="profile__name">{fullName(profile)}</h2>
+            <span className="badge badge--primary">
+              <ShieldCheck size={12} /> {ROLE_LABELS[profile.role] ?? "Member"}
+            </span>
+          </div>
+          {!editing && (
+            <button type="button" className="btn" onClick={startEdit} style={{ marginLeft: "auto" }}>
+              <Pencil size={16} /> Edit
+            </button>
+          )}
+        </div>
+
+        {!editing ? (
+          <dl className="details">
+            <div>
+              <dt>
+                <Mail size={16} /> Email
+              </dt>
+              <dd>{profile.email}</dd>
+            </div>
+            <div>
+              <dt>
+                <Phone size={16} /> Phone
+              </dt>
+              <dd>{profile.phoneNo || "-"}</dd>
+            </div>
+            <div>
+              <dt>
+                <HomeIcon size={16} /> House / flat
+              </dt>
+              <dd>{profile.houseNo || "-"}</dd>
+            </div>
+            <div>
+              <dt>
+                <Cake size={16} /> Age
+              </dt>
+              <dd>{profile.age ?? "-"}</dd>
+            </div>
+          </dl>
+        ) : (
+          <form className="form" onSubmit={handleSubmit} noValidate>
+            <Alert>{saveError}</Alert>
+            <div className="form-grid">
+              <Field label="First name" htmlFor="firstName" error={errors.firstName}>
+                {input("firstName", { autoComplete: "given-name" })}
+              </Field>
+              <Field label="Last name" htmlFor="lastName" error={errors.lastName}>
+                {input("lastName", { autoComplete: "family-name" })}
+              </Field>
+              <Field label="Email" htmlFor="email" error={errors.email} className="span-2">
+                {input("email", { type: "email", autoComplete: "email" })}
+              </Field>
+              <Field label="Phone number" htmlFor="phoneNo" error={errors.phoneNo}>
+                {input("phoneNo", { type: "tel", inputMode: "numeric" })}
+              </Field>
+              <Field label="House / flat number" htmlFor="houseNo" error={errors.houseNo}>
+                {input("houseNo")}
+              </Field>
+              <Field label="Age" htmlFor="age" error={errors.age}>
+                {input("age", { type: "number", min: MIN_AGE, max: 120 })}
+              </Field>
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn btn--ghost" onClick={() => setEditing(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn--primary" disabled={saving}>
+                {saving ? "Saving…" : "Save changes"}
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
     </div>
   );
 };

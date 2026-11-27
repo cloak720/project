@@ -1,80 +1,49 @@
 import React from "react";
-import "./PrivacyPolicy.css";
+import { Link } from "react-router-dom";
+import { PageHeader } from "./ui";
 
-const PrivacyPolicy = () => {
-  return (
-    <div className="privacy-policy-container">
-      <header className="privacy-policy-header">
-        <h1>Privacy Policy</h1>
-      </header>
+const PrivacyPolicy = () => (
+  <div className="container page page--narrow">
+    <PageHeader eyebrow="Legal" title="Privacy policy" subtitle="What we collect, why, and who can see it." />
+    <article className="card card--pad-lg prose">
+      <p>NeighborAid only collects what it needs to connect neighbors safely.</p>
 
-      <section className="privacy-policy-content">
-        <p>
-          At Neighbor-Aid, we are committed to protecting your privacy. This
-          Privacy Policy outlines how we collect, use, and safeguard your
-          information when you use our platform.
-        </p>
+      <h2>1. What we collect</h2>
+      <ul>
+        <li>Account details: name, email, phone number, house number and age.</li>
+        <li>What you post: requests, opportunities you join, messages to us and feedback you leave.</li>
+      </ul>
 
-        <h2>1. Information We Collect</h2>
-        <ul>
-          <li>Personal Information: Name, email address, phone number, etc.</li>
-          <li>
-            Account Information: Login credentials and information related to
-            your account.
-          </li>
-          <li>
-            Usage Data: Information about how you interact with our platform.
-          </li>
-        </ul>
+      <h2>2. Who sees what</h2>
+      <ul>
+        <li>Volunteers see the title, details and house number of open requests.</li>
+        <li>Your phone number is shown to the volunteer who accepts your request so they can coordinate with you.</li>
+        <li>Administrators can see account and activity information in order to moderate the platform.</li>
+      </ul>
 
-        <h2>2. How We Use Your Information</h2>
-        <ul>
-          <li>To provide and improve our services.</li>
-          <li>To communicate with you about updates, offers, and opportunities.</li>
-          <li>To ensure security and prevent fraud.</li>
-        </ul>
+      <h2>3. How we use it</h2>
+      <ul>
+        <li>To run the service: matching requests with volunteers and showing status updates.</li>
+        <li>To keep the community safe: investigating reports and enforcing our terms.</li>
+      </ul>
+      <p>We don't sell your information or share it with third parties except where the law requires it.</p>
 
-        <h2>3. Sharing Your Information</h2>
-        <p>
-          We do not share your personal information with third parties without
-          your consent, except as required by law or to provide our services
-          effectively.
-        </p>
+      <h2>4. Your choices</h2>
+      <ul>
+        <li>You can view and edit your details at any time on your profile page.</li>
+        <li>You can withdraw a request before a volunteer accepts it.</li>
+        <li>You can ask us to delete your account by sending us a message.</li>
+      </ul>
 
-        <h2>4. Data Security</h2>
-        <p>
-          We take appropriate measures to protect your data from unauthorized
-          access, alteration, or destruction. However, no method of
-          transmission over the Internet is completely secure.
-        </p>
+      <h2>5. Security</h2>
+      <p>We take reasonable steps to protect your data, but no system connected to the internet is perfectly secure.</p>
 
-        <h2>5. Your Rights</h2>
-        <ul>
-          <li>Access: You can request a copy of your personal data.</li>
-          <li>Correction: You can update or correct your personal information.</li>
-          <li>
-            Deletion: You can request that we delete your personal information.
-          </li>
-        </ul>
-
-        <h2>6. Updates to This Policy</h2>
-        <p>
-          We may update this Privacy Policy from time to time. Any changes will
-          be posted on this page, and we encourage you to review it regularly.
-        </p>
-
-        <h2>7. Contact Us</h2>
-        <p>
-          If you have any questions or concerns about this Privacy Policy,
-          please contact us at <a href="mailto:support@neighboraid.com">support@neighboraid.com</a>.
-        </p>
-      </section>
-
-      <footer className="privacy-policy-footer">
-        <p>&copy; {new Date().getFullYear()} Neighbor-Aid. All rights reserved.</p>
-      </footer>
-    </div>
-  );
-};
+      <h2>6. Contact</h2>
+      <p>
+        Privacy questions? <Link to="/contact">Send us a message</Link>.
+      </p>
+    </article>
+  </div>
+);
 
 export default PrivacyPolicy;

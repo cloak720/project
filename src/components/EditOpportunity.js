@@ -1,127 +1,66 @@
-// src/components/EditOpportunity.js
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { useParams, useNavigate } from "react-router-dom";
-import "./OpportunityForm.css";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import api, { errorMessage } from "../lib/api";
+import { toLocalInput } from "../lib/format";
+import { useToast } from "../context/AppContext";
+import { Alert, PageHeader, Spinner } from "./ui";
+import OpportunityForm from "./OpportunityForm";
 
 const EditOpportunity = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    category: "",
-    deadline: "",
-    location: "",
-    volunteerLimit: "",
-  });
+  const toast = useToast();
+  const [initial, setInitial] = useState(null);
+  const [joined, setJoined] = useState(0);
+  const [loadError, setLoadError] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchOpportunity = async () => {
-      try {
-        // Retrieve session data (email, userId, etc.)
-        const userEmail = sessionStorage.getItem("userEmail");
-        const userId = sessionStorage.getItem("userId");
-
-        if (!userEmail || !userId) {
-          console.error("User is not logged in.");
-          return;
-        }
-
-        const response = await axios.get(`http://localhost:8080/api/opportunities/${id}`, {
-          params: { userEmail, userId }, // Send session data as query parameters
-          withCredentials: true,
+    api
+      .get(`/opportunities/${id}`)
+      .then(({ data }) => {
+        setJoined(data.volunteers?.length || 0);
+        // The API returns an ISO timestamp; the date input needs local "YYYY-MM-DDTHH:mm".
+        setInitial({
+          name: data.name || "",
+          description: data.description || "",
+          category: data.category || "",
+          location: data.location || "",
+          deadline: toLocalInput(data.deadline),
+          volunteerLimit: String(data.volunteerLimit ?? 1),
         });
-        setFormData(response.data);
-      } catch (error) {
-        console.error("Error fetching opportunity:", error);
-      }
-    };
-
-    fetchOpportunity();
+      })
+      .catch((err) =>
+        setLoadError(err.response?.status === 404 ? "This opportunity doesn't exist any more." : errorMessage(err, "Couldn't load this opportunity."))
+      );
   }, [id]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSave = async (payload) => {
+    setError("");
     try {
-      // Retrieve session data (email, userId, etc.)
-      const userEmail = sessionStorage.getItem("userEmail");
-      const userId = sessionStorage.getItem("userId");
-
-      if (!userEmail || !userId) {
-        console.error("User is not logged in.");
-        return;
-      }
-
-      // Include session data in the request body
-      await axios.put(`http://localhost:8080/api/opportunities/${id}`, 
-        { ...formData, userEmail, userId }, 
-        { withCredentials: true }
-      );
+      await api.put(`/opportunities/${id}`, payload);
+      toast("Changes saved.");
       navigate("/volunteer-opportunities");
-    } catch (error) {
-      console.error("Error updating opportunity:", error);
+    } catch (err) {
+      setError(errorMessage(err, "Couldn't save your changes."));
     }
   };
 
   return (
-    <div className="opportunity-form">
-      <h1>Edit Opportunity</h1>
-      <form onSubmit={handleSubmit}>
-        <label>Name:</label>
-        <input
-          type="text"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          required
-        />
-        <label>Description:</label>
-        <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          required
-        />
-        <label>Category:</label>
-        <input
-          type="text"
-          name="category"
-          value={formData.category}
-          onChange={handleChange}
-          required
-        />
-        <label>Deadline:</label>
-        <input
-          type="datetime-local"
-          name="deadline"
-          value={formData.deadline}
-          onChange={handleChange}
-          required
-        />
-        <label>Location:</label>
-        <input
-          type="text"
-          name="location"
-          value={formData.location}
-          onChange={handleChange}
-          required
-        />
-        <label>Volunteer Limit:</label>
-        <input
-          type="number"
-          name="volunteerLimit"
-          value={formData.volunteerLimit}
-          onChange={handleChange}
-          required
-        />
-        <button type="submit">Update</button>
-      </form>
+    <div className="container page page--narrow">
+      <PageHeader eyebrow="Edit opportunity" title={initial?.name || "Edit opportunity"} subtitle={joined ? `${joined} volunteer${joined > 1 ? "s have" : " has"} already joined.` : undefined} />
+      {loadError ? (
+        <div className="stack">
+          <Alert>{loadError}</Alert>
+          <Link to="/volunteer-opportunities" className="btn" style={{ alignSelf: "flex-start" }}>
+            Back to opportunities
+          </Link>
+        </div>
+      ) : !initial ? (
+        <Spinner />
+      ) : (
+        <OpportunityForm initial={initial} minLimit={Math.max(1, joined)} submitLabel="Save changes" busyLabel="Saving…" onSubmit={handleSave} serverError={error} />
+      )}
     </div>
   );
 };

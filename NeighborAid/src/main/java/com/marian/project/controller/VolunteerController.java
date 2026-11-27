@@ -33,6 +33,10 @@ public class VolunteerController {
         if (email == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not logged in.");
         }
+        Integer role = (Integer) session.getAttribute("role");
+        if (role == null || role != 2) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only volunteers can join opportunities.");
+        }
 
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {

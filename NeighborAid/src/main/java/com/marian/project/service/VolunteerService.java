@@ -32,13 +32,17 @@ public class VolunteerService {
 
         // Prevent duplicate application
         if (volunteerRepository.existsByUserIdAndOpportunityId(userId, opportunityId)) {
-            throw new IllegalStateException("User has already applied for this opportunity.");
+            throw new IllegalStateException("You've already joined this opportunity.");
+        }
+
+        if (opportunity.getDeadline() != null && opportunity.getDeadline().before(new java.util.Date())) {
+            throw new IllegalStateException("This opportunity has already taken place.");
         }
 
         // Check if there is room for another volunteer
         long currentVolunteers = volunteerRepository.countByOpportunityId(opportunityId);
         if (opportunity.getVolunteerLimit() != null && currentVolunteers >= opportunity.getVolunteerLimit()) {
-            throw new IllegalStateException("Volunteer limit reached for this opportunity.");
+            throw new IllegalStateException("Sorry, this opportunity is already full.");
         }
 
         Volunteer volunteer = new Volunteer();

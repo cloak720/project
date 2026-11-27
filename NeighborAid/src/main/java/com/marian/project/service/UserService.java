@@ -1,7 +1,10 @@
 package com.marian.project.service;
 
+import com.marian.project.model.Request;
 import com.marian.project.model.User;
+import com.marian.project.repository.RequestRepository;
 import com.marian.project.repository.UserRepository;
+import com.marian.project.repository.VolunteerRepository;
 import java.util.Optional;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +16,12 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private RequestRepository requestRepository;
+
+    @Autowired
+    private VolunteerRepository volunteerRepository;
 
     @Transactional
     public User saveUser(User user) {
@@ -76,9 +85,32 @@ public class UserService {
         existingUser.setAge(user.getAge());
         existingUser.setHouseNo(user.getHouseNo());
         existingUser.setEmail(user.getEmail());
-        existingUser.setRole(user.getRole());
-        // Optionally, you can update the banned status here if needed.
+        // Role and banned status are deliberately NOT copied from the request body:
+        // otherwise anyone could promote themselves to admin from the profile form.
         return userRepository.save(existingUser);
+    }
+
+    /**
+     * Deletes an account without leaving broken references behind: the user's own requests and
+     * opportunity sign-ups go with them, and requests they had accepted as a volunteer go back to PENDING
+     * so another volunteer can pick them up.
+     */
+    @Transactional
+    public void deleteUser(Long id) {
+        User user = getUserById(id);
+        if (user.getRole() != null && user.getRole() == 0) {
+            throw new RuntimeException("Admin accounts can't be deleted from the dashboard.");
+        }
+        for (Request r : requestRepository.findByVolunteerId(id)) {
+            r.setVolunteer(null);
+            if (!"COMPLETED".equalsIgnoreCase(r.getStatus())) {
+                r.setStatus("PENDING");
+            }
+            requestRepository.save(r);
+        }
+        requestRepository.deleteAll(requestRepository.findByUserId(id));
+        volunteerRepository.deleteAll(volunteerRepository.findByUserId(id));
+        userRepository.delete(user);
     }
 
     // Retrieve all users (for admin use)
