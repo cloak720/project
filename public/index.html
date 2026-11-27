@@ -2,26 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#1f6f68" />
-    <meta name="description" content="NeighborAid connects people who need a hand with volunteers in their neighborhood." />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <meta name="theme-color" content="#f6f6f8" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="NeighborAid connects residents who need a hand with volunteers on their street. Errands, rides, repairs and community projects." />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <script>
-      // Apply the saved theme before React loads so there is no light-mode flash.
+      // Resolve the theme before first paint so there is no flash of the wrong one.
       (function () {
+        var t = "light";
         try {
-          var t = localStorage.getItem("theme");
-          if (!t) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-          document.documentElement.dataset.theme = t;
+          var saved = localStorage.getItem("na.theme");
+          t = saved === "light" || saved === "dark" ? saved : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         } catch (e) {}
+        document.documentElement.dataset.theme = t;
       })();
     </script>
     <title>NeighborAid · Help from people next door</title>

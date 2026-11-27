@@ -1,0 +1,14 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { logout } from "../../lib/auth";
+
+// Visiting /logout signs you out and returns you to the login page.
+const Logout = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    logout().then(() => navigate("/login", { replace: true }));
+  }, [navigate]);
+  return null;
+};
+
+export default Logout;

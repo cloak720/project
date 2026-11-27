@@ -1,48 +1,59 @@
 import api from "./api";
 
-export const ROLES = { ADMIN: 0, USER: 1, VOLUNTEER: 2 };
+export const ROLES = { ADMIN: 0, RESIDENT: 1, VOLUNTEER: 2 };
 
 export const ROLE_LABELS = {
   [ROLES.ADMIN]: "Admin",
-  [ROLES.USER]: "Resident",
+  [ROLES.RESIDENT]: "Resident",
   [ROLES.VOLUNTEER]: "Volunteer",
 };
 
-const KEYS = ["userId", "role", "userEmail", "userName", "userLastName"];
+const STORE = sessionStorage;
+const KEYS = {
+  userId: "na.userId",
+  role: "na.role",
+  email: "na.email",
+  firstName: "na.firstName",
+  lastName: "na.lastName",
+};
 
-/** Current session from sessionStorage, or null when nobody is logged in. */
+export const SESSION_EVENT = "na:session";
+
+const emit = () => window.dispatchEvent(new Event(SESSION_EVENT));
+
+/** The signed-in person (from this tab's storage), or null. The server session cookie is the real authority. */
 export const getSession = () => {
-  const userId = sessionStorage.getItem("userId");
-  const role = sessionStorage.getItem("role");
+  const userId = STORE.getItem(KEYS.userId);
+  const role = STORE.getItem(KEYS.role);
   if (!userId || role === null) return null;
   return {
-    userId,
+    userId: Number(userId),
     role: Number(role),
-    email: sessionStorage.getItem("userEmail") || "",
-    firstName: sessionStorage.getItem("userName") || "",
-    lastName: sessionStorage.getItem("userLastName") || "",
+    email: STORE.getItem(KEYS.email) || "",
+    firstName: STORE.getItem(KEYS.firstName) || "",
+    lastName: STORE.getItem(KEYS.lastName) || "",
   };
 };
 
 export const saveSession = ({ userId, role, email, firstName, lastName }) => {
-  sessionStorage.setItem("userId", String(userId));
-  sessionStorage.setItem("role", String(role));
-  sessionStorage.setItem("userEmail", email || "");
-  sessionStorage.setItem("userName", firstName || "");
-  sessionStorage.setItem("userLastName", lastName || "");
-  window.dispatchEvent(new Event("session-change"));
+  STORE.setItem(KEYS.userId, String(userId));
+  STORE.setItem(KEYS.role, String(role));
+  STORE.setItem(KEYS.email, email || "");
+  STORE.setItem(KEYS.firstName, firstName || "");
+  STORE.setItem(KEYS.lastName, lastName || "");
+  emit();
 };
 
 export const updateSession = (patch) => {
-  if (patch.email !== undefined) sessionStorage.setItem("userEmail", patch.email);
-  if (patch.firstName !== undefined) sessionStorage.setItem("userName", patch.firstName);
-  if (patch.lastName !== undefined) sessionStorage.setItem("userLastName", patch.lastName);
-  window.dispatchEvent(new Event("session-change"));
+  ["email", "firstName", "lastName"].forEach((k) => {
+    if (patch[k] !== undefined) STORE.setItem(KEYS[k], patch[k]);
+  });
+  emit();
 };
 
 export const clearSession = () => {
-  KEYS.forEach((k) => sessionStorage.removeItem(k));
-  window.dispatchEvent(new Event("session-change"));
+  Object.values(KEYS).forEach((k) => STORE.removeItem(k));
+  emit();
 };
 
 /** Ends the server session too; local state is cleared even if the call fails. */
@@ -57,7 +68,7 @@ export const logout = async () => {
 };
 
 export const homePathFor = (role) => {
-  if (role === ROLES.ADMIN) return "/admin-dashboard";
-  if (role === ROLES.VOLUNTEER) return "/volunteer-home";
-  return "/";
+  if (role === ROLES.ADMIN) return "/admin";
+  if (role === ROLES.VOLUNTEER) return "/board";
+  return "/home";
 };
