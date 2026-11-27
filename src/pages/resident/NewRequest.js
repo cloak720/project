@@ -225,7 +225,7 @@ const NewRequest = () => {
             <Eye size={13} aria-hidden="true" /> What volunteers will see
           </p>
           <RequestCard request={preview} view="board" />
-          <ul className="composer__tips" role="list">
+          <ul className="composer__tips">
             <li>Say exactly where and when, e.g. “pharmacy on Elm St, before 5pm”.</li>
             <li>Mention anything heavy, pets in the house, or access notes.</li>
             <li>Use High urgency only for things that can't wait.</li>

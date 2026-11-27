@@ -253,7 +253,7 @@ const Landing = () => {
           <p className="eyebrow">How it works</p>
           <h2 className="section__title">From “I need a hand” to “thank you” in three steps.</h2>
         </motion.div>
-        <ol className="steps" role="list">
+        <ol className="steps">
           {STEPS.map((s, i) => (
             <motion.li key={s.title} className="step" {...rise(0.08 * i)}>
               <span className="step__node">
@@ -309,7 +309,7 @@ const Landing = () => {
               </span>
               <h3>{r.title}</h3>
               <p className="muted">{r.text}</p>
-              <ul role="list">
+              <ul>
                 {r.points.map((p) => (
                   <li key={p}>
                     <CheckCircle2 size={15} aria-hidden="true" /> {p}

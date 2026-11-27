@@ -146,7 +146,7 @@ const ResidentHome = () => {
                 {view.toRate.length === 0 ? (
                   <p className="card__body muted small">When a volunteer finishes one of your requests, you can thank them here.</p>
                 ) : (
-                  <ul className="mini-list" role="list">
+                  <ul className="mini-list">
                     {view.toRate.map(({ volunteer, task }) => (
                       <li key={volunteer.id}>
                         <Link to={`/feedback?volunteer=${volunteer.id}`} className="mini-list__item">
@@ -175,7 +175,7 @@ const ResidentHome = () => {
                 {view.upcoming.length === 0 ? (
                   <p className="card__body muted small">No community projects scheduled yet.</p>
                 ) : (
-                  <ul className="mini-list" role="list">
+                  <ul className="mini-list">
                     {view.upcoming.map((o) => {
                       const Icon = categoryIcon(o.category);
                       return (
