@@ -114,7 +114,8 @@ const CommandPalette = ({ open, onClose, session, onToggleSidebar, onShowShortcu
 
   const results = useMemo(() => {
     const ranked = commands
-      .map((c) => ({ ...c, s: score(`${c.label} ${c.group}`, q) }))
+      // Group names only match as a whole word ("theme" lists all themes), never letter by letter.
+      .map((c) => ({ ...c, s: score(c.label, q) || (q && c.group.toLowerCase().startsWith(q) ? 30 : 0) }))
       .filter((c) => c.s > 0);
     // Records only appear once you start typing, so the default list stays short.
     const found = q
@@ -138,7 +139,9 @@ const CommandPalette = ({ open, onClose, session, onToggleSidebar, onShowShortcu
 
   const flat = useMemo(() => results.flatMap((g) => g.items), [results]);
 
-  useEffect(() => setActive(0), [q]);
+  useEffect(() => {
+    setActive(0);
+  }, [q]);
 
   useEffect(() => {
     listRef.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });

@@ -115,7 +115,9 @@ const AppShell = () => {
   const [palette, setPalette] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
 
-  useEffect(() => setDrawer(false), [pathname]);
+  useEffect(() => {
+    setDrawer(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!drawer) return undefined;

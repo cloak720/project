@@ -165,11 +165,6 @@ const FEATURES = [
     text: "Clean-ups, food drives and homework clubs with live spot counts.",
   },
   {
-    icon: ShieldCheck,
-    title: "Moderated by real people",
-    text: "Admins can suspend accounts, remove posts and answer every message.",
-  },
-  {
     icon: Command,
     title: "Fast for power users",
     text: "A command menu, two-key shortcuts and instant, optimistic updates.",
@@ -182,6 +177,11 @@ const FEATURES = [
       </div>
     ),
     wide: true,
+  },
+  {
+    icon: ShieldCheck,
+    title: "Moderated by real people",
+    text: "Organisers can suspend accounts, remove posts and answer every message.",
   },
 ];
 

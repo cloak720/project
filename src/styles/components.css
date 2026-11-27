@@ -1760,6 +1760,9 @@ button.stat:hover {
 /* ============ Status stepper ============ */
 
 .stepper {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;

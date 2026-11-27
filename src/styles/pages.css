@@ -1741,8 +1741,8 @@ a.mini-list__item:hover {
 
 .shot__palette {
   position: absolute;
-  right: -24px;
-  top: 64px;
+  right: -28px;
+  bottom: 72px;
   width: 230px;
   padding: 6px;
   border-radius: 12px;
@@ -2041,16 +2041,16 @@ a.mini-list__item:hover {
 }
 
 .bento__cell--map {
-  grid-column: span 3;
+  grid-column: span 2;
   min-height: 220px;
-  padding-right: 48%;
+  padding-right: 46%;
 }
 
 .bento__map {
   position: absolute;
-  right: -40px;
-  top: -30px;
-  width: 52%;
+  right: -30px;
+  top: -20px;
+  width: 56%;
   opacity: 0.9;
   mask-image: linear-gradient(90deg, transparent, #000 35%);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 35%);

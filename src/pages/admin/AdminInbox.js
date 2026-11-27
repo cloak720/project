@@ -45,7 +45,9 @@ const AdminInbox = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id]);
 
-  useEffect(() => setDraft(selected?.reply || ""), [selected?.id, selected?.reply]);
+  useEffect(() => {
+    setDraft(selected?.reply || "");
+  }, [selected?.id, selected?.reply]);
 
   const open = (m) => setParams(m ? { highlight: String(m.id) } : {}, { replace: true });
 
