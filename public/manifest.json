@@ -1,9 +1,9 @@
 {
   "short_name": "NeighborAid",
-  "name": "NeighborAid: help from people next door",
+  "name": "NeighborAid: help from the people next door",
   "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#5b4ff5",
-  "background_color": "#f6f6f8"
+  "theme_color": "#f5efe3",
+  "background_color": "#f5efe3"
 }

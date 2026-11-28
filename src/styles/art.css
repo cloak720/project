@@ -1,0 +1,209 @@
+/* Illustration styling. Art is drawn with classes so both themes recolour it automatically. */
+
+.art {
+  overflow: visible;
+}
+
+.art .s {
+  stroke: var(--art-line);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.art .thin {
+  stroke-width: 1.6;
+}
+
+.art .thick {
+  stroke-width: 3.2;
+}
+
+.art .n {
+  fill: none;
+}
+
+.art .f-line {
+  fill: var(--art-line);
+}
+
+.art .f-paper {
+  fill: var(--art-paper);
+}
+
+.art .f-brick {
+  fill: var(--art-brick);
+}
+
+.art .f-blush {
+  fill: var(--art-blush);
+}
+
+.art .f-ochre {
+  fill: var(--art-ochre);
+}
+
+.art .f-sage {
+  fill: var(--art-sage);
+}
+
+.art .f-forest {
+  fill: var(--art-forest);
+}
+
+.art .f-sky {
+  fill: var(--art-sky);
+}
+
+.art .f-skin1 {
+  fill: var(--art-skin-1);
+}
+
+.art .f-skin2 {
+  fill: var(--art-skin-2);
+}
+
+.art .f-skin3 {
+  fill: var(--art-skin-3);
+}
+
+.art .f-shadow {
+  fill: var(--art-shadow);
+}
+
+.art .wash {
+  opacity: 0.45;
+}
+
+.art .soft {
+  opacity: 0.7;
+}
+
+.art .st-brick {
+  stroke: var(--art-brick);
+}
+
+.art .st-ochre {
+  stroke: var(--art-ochre);
+}
+
+.art .st-sage {
+  stroke: var(--art-sage);
+}
+
+.art .st-sky {
+  stroke: var(--art-sky);
+}
+
+.art .st-paper {
+  stroke: var(--art-paper);
+}
+
+/* Gentle life in the hero: steam rises, hearts float, the sun breathes. */
+@media (prefers-reduced-motion: no-preference) {
+  .art .float {
+    animation: art-float 4.5s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .art .float--late {
+    animation-delay: -2.2s;
+  }
+
+  .art .sway {
+    animation: art-sway 6s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: bottom center;
+  }
+
+  .art .spin-slow {
+    animation: art-spin 60s linear infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+}
+
+@keyframes art-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes art-sway {
+  0%,
+  100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+
+@keyframes art-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Logo ---------- */
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.brand:hover {
+  color: var(--ink);
+}
+
+.brand__mark {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  transition: transform 400ms var(--ease);
+}
+
+.brand:hover .brand__mark {
+  transform: rotate(-6deg) scale(1.05);
+}
+
+.brand__word {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variation-settings: "SOFT" 100;
+  line-height: 1;
+}
+
+.brand__word i {
+  font-weight: 500;
+  color: var(--brick);
+}
+
+.logo-mark .roof {
+  fill: var(--brick);
+}
+
+.logo-mark .heart {
+  fill: var(--card-raised);
+}
+
+.logo-mark .smoke {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.logo-mark .chimney {
+  fill: var(--brick-strong);
+}

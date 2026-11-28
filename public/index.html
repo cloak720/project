@@ -2,30 +2,31 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.svg" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f6f6f8" />
-    <meta name="color-scheme" content="light dark" />
-    <meta name="description" content="NeighborAid connects residents who need a hand with volunteers on their street. Errands, rides, repairs and community projects." />
+    <meta name="theme-color" content="#f5efe3" />
+    <meta name="description" content="NeighborAid connects people who could use a hand with volunteers on their own streets: errands, lifts, repairs and community projects." />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,0..100;1,9..144,300..700,0..100&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Caveat:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <script>
-      // Resolve the theme before first paint so there is no flash of the wrong one.
+      // Apply the saved theme before React loads so there is no flash of the wrong edition.
       (function () {
-        var t = "light";
         try {
-          var saved = localStorage.getItem("na.theme");
-          t = saved === "light" || saved === "dark" ? saved : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          var t = localStorage.getItem("theme");
+          if (t !== "light" && t !== "dark") t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.dataset.theme = t;
         } catch (e) {}
-        document.documentElement.dataset.theme = t;
       })();
     </script>
-    <title>NeighborAid · Help from people next door</title>
+    <title>NeighborAid · Help from the people next door</title>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run NeighborAid.</noscript>
+    <noscript>NeighborAid needs JavaScript to run. Please enable it and reload the page.</noscript>
     <div id="root"></div>
   </body>
 </html>

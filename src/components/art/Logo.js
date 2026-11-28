@@ -1,44 +1,26 @@
-import React, { useId } from "react";
+import React from "react";
+import { Link } from "react-router-dom";
 
-/**
- * The NeighborAid mark: a house drawn from one continuous roofline, with a "plus" for aid
- * where the door would be. Set on an iris tile with a soft top highlight.
- */
-export const LogoMark = ({ size = 28, className = "" }) => {
-  const id = useId().replace(/:/g, "");
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" className={`brand__mark ${className}`} aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id={`${id}-bg`} x1="4" y1="2" x2="28" y2="30" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#8478ff" />
-          <stop offset="0.55" stopColor="#5b4ff5" />
-          <stop offset="1" stopColor="#3a2fc4" />
-        </linearGradient>
-        <linearGradient id={`${id}-hi`} x1="16" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.35" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="8.5" fill={`url(#${id}-bg)`} />
-      <rect x="0.5" y="0.5" width="31" height="31" rx="8" fill={`url(#${id}-hi)`} stroke="#fff" strokeOpacity="0.18" />
-      <path
-        d="M7.5 15.2 16 8.2l8.5 7M10 13.4v9.1a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5v-9.1"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="2.1"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M16 15.6v5.6M13.2 18.4h5.6" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" />
-    </svg>
-  );
-};
-
-export const Logo = ({ size = 28 }) => (
-  <>
-    <LogoMark size={size} />
-    <span className="brand__word">
-      Neighbor<b>Aid</b>
-    </span>
-  </>
+/** The mark: a little house with a heart for a door, and a curl of smoke from the chimney. */
+export const LogoMark = ({ className = "brand__mark" }) => (
+  <svg className={`logo-mark ${className}`} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+    <path className="smoke" d="M28.6 7.2c-1.8-1.4.9-2.6-.4-4.4" />
+    <rect className="chimney" x="25.6" y="8" width="4.4" height="8" rx="1" />
+    <path className="roof" d="M5.6 18.4 18.3 7.1a2.6 2.6 0 0 1 3.4 0l12.7 11.3c.8.7.3 2-.8 2H32v12.4a2.4 2.4 0 0 1-2.4 2.4H10.4A2.4 2.4 0 0 1 8 32.8V20.4H6.4c-1.1 0-1.6-1.3-.8-2Z" />
+    <path
+      className="heart"
+      d="M20 31.6c-5.2-3.4-6.8-6.2-6.8-8.4 0-2.1 1.6-3.6 3.5-3.6 1.4 0 2.6.8 3.3 2 .7-1.2 1.9-2 3.3-2 1.9 0 3.5 1.5 3.5 3.6 0 2.2-1.6 5-6.8 8.4Z"
+    />
+  </svg>
 );
+
+const Logo = ({ to = "/", label = "NeighborAid home" }) => (
+  <Link to={to} className="brand" aria-label={label}>
+    <LogoMark />
+    <span className="brand__word" aria-hidden="true">
+      Neighbor<i>Aid</i>
+    </span>
+  </Link>
+);
+
+export default Logo;
