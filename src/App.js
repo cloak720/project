@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { Suspense, lazy, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { MotionConfig, motion } from "framer-motion";
 import { AppProviders } from "./context/AppContext";
@@ -16,10 +16,14 @@ import NewRequest from "./pages/NewRequest";
 import MyRequests from "./pages/MyRequests";
 import VolunteerDashboard from "./pages/VolunteerDashboard";
 import Opportunities from "./pages/Opportunities";
-import { CreateOpportunity, EditOpportunity } from "./pages/OpportunityEditor";
 import Contact from "./pages/Contact";
-import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import { Loading } from "./components/ui";
+
+// Admin-only screens load on demand, so residents and volunteers never download them.
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const CreateOpportunity = lazy(() => import("./pages/OpportunityEditor").then((m) => ({ default: m.CreateOpportunity })));
+const EditOpportunity = lazy(() => import("./pages/OpportunityEditor").then((m) => ({ default: m.EditOpportunity })));
 
 const { ADMIN, USER, VOLUNTEER } = ROLES;
 const ANY = [ADMIN, USER, VOLUNTEER];
@@ -58,30 +62,32 @@ const Shell = () => {
       {!isAuth && <Header />}
       <main id="main" className="app-main" ref={mainRef} tabIndex={-1}>
         <motion.div key={pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/logout" element={<Logout />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
+          <Suspense fallback={<Loading />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/logout" element={<Logout />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
 
-            <Route path="/user-profile" element={guard(ANY, <Profile />)} />
-            <Route path="/volunteer-opportunities" element={guard(ANY, <Opportunities />)} />
-            <Route path="/contact" element={guard([USER, VOLUNTEER], <Contact />)} />
+              <Route path="/user-profile" element={guard(ANY, <Profile />)} />
+              <Route path="/volunteer-opportunities" element={guard(ANY, <Opportunities />)} />
+              <Route path="/contact" element={guard([USER, VOLUNTEER], <Contact />)} />
 
-            <Route path="/user-request" element={guard([USER], <NewRequest />)} />
-            <Route path="/my-requests" element={guard([USER], <MyRequests />)} />
-            <Route path="/submission/:requestId" element={<LegacySubmissionRedirect />} />
+              <Route path="/user-request" element={guard([USER], <NewRequest />)} />
+              <Route path="/my-requests" element={guard([USER], <MyRequests />)} />
+              <Route path="/submission/:requestId" element={<LegacySubmissionRedirect />} />
 
-            <Route path="/volunteer-home" element={guard([VOLUNTEER], <VolunteerDashboard />)} />
+              <Route path="/volunteer-home" element={guard([VOLUNTEER], <VolunteerDashboard />)} />
 
-            <Route path="/admin-dashboard" element={guard([ADMIN], <AdminDashboard />)} />
-            <Route path="/create-opportunity" element={guard([ADMIN], <CreateOpportunity />)} />
-            <Route path="/edit-opportunity/:id" element={guard([ADMIN], <EditOpportunity />)} />
+              <Route path="/admin-dashboard" element={guard([ADMIN], <AdminDashboard />)} />
+              <Route path="/create-opportunity" element={guard([ADMIN], <CreateOpportunity />)} />
+              <Route path="/edit-opportunity/:id" element={guard([ADMIN], <EditOpportunity />)} />
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </motion.div>
       </main>
       {!isAuth && <Footer />}

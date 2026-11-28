@@ -126,16 +126,56 @@ export const Privacy = () => (
         ),
       },
       {
+        title: "Cookies and storage on your device",
+        body: (
+          <ul>
+            <li>
+              One cookie keeps you logged in while you use the site. It's essential, contains no personal details, and ends when you
+              log out or after an hour of inactivity.
+            </li>
+            <li>Your browser remembers whether you prefer the light or dark edition. That setting never leaves your device.</li>
+            <li>We don't use advertising or tracking cookies, and we don't use analytics.</li>
+          </ul>
+        ),
+      },
+      {
+        title: "Other services we use",
+        body: (
+          <p>
+            The site's typefaces are loaded from Google Fonts, so your browser connects to Google's servers and Google receives your IP
+            address when a page loads. Nothing else about you is shared with third parties.
+          </p>
+        ),
+      },
+      {
+        title: "How long we keep it",
+        body: (
+          <p>
+            We keep your details for as long as you have an account. When you delete it, we remove your profile, your requests, your
+            project sign-ups, ratings given by or about you, and messages you sent us. Requests you had accepted as a volunteer go back on
+            the noticeboard for someone else.
+          </p>
+        ),
+      },
+      {
         title: "Your choices",
         body: (
           <ul>
             <li>You can view and edit your details at any time on your profile.</li>
             <li>You can withdraw a request until a volunteer accepts it.</li>
-            <li>You can ask us to delete your account by sending us a message.</li>
+            <li>You can delete your account yourself, at any time, from your profile page.</li>
           </ul>
         ),
       },
-      { title: "Security", body: <p>We take reasonable steps to protect your data, but no system connected to the internet is perfectly secure.</p> },
+      {
+        title: "Security",
+        body: (
+          <p>
+            Passwords are stored as salted one-way hashes, so nobody, including us, can read them. We take reasonable steps to protect
+            your data, but no system connected to the internet is perfectly secure.
+          </p>
+        ),
+      },
       { title: "Contact", body: contactLink },
     ]}
   />

@@ -7,10 +7,13 @@ import "./styles/art.css";
 import "./styles/layout.css";
 import "./styles/pages.css";
 import App from "./App";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );

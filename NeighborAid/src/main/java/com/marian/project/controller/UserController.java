@@ -5,7 +5,6 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,10 +15,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.marian.project.model.User;
 import com.marian.project.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 @RequestMapping("/api/user")
 public class UserController {
 
@@ -40,7 +40,7 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody User user) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody User user) {
         // Public sign-up may only create residents (1) or volunteers (2); admins are created by hand.
         if (user.getRole() == null || (user.getRole() != 1 && user.getRole() != 2)) {
             return ResponseEntity.badRequest().body("Choose whether you're joining as a resident or a volunteer.");
@@ -50,6 +50,9 @@ public class UserController {
         }
         if (user.getEmail() == null || user.getEmail().isBlank()) {
             return ResponseEntity.badRequest().body("Email is required.");
+        }
+        if (user.getPassword() == null || user.getPassword().length() < 8 || user.getPassword().length() > 128) {
+            return ResponseEntity.badRequest().body("Passwords must be between 8 and 128 characters.");
         }
         user.setEmail(user.getEmail().trim().toLowerCase());
         if (userService.isEmailRegistered(user.getEmail())) {
@@ -62,11 +65,14 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody User loginRequest, HttpSession session) {
+    public ResponseEntity<?> login(@RequestBody User loginRequest, HttpServletRequest request) {
         try {
             String email = loginRequest.getEmail() == null ? "" : loginRequest.getEmail().trim();
             User user = userService.authenticate(email, loginRequest.getPassword());
             if (user != null) {
+                // New session ID on every login, so a session ID planted before login (session fixation) is useless.
+                HttpSession session = request.getSession(true);
+                request.changeSessionId();
                 session.setAttribute("userEmail", user.getEmail());
                 session.setAttribute("userId", user.getId());
                 session.setAttribute("role", user.getRole());
@@ -164,6 +170,22 @@ public class UserController {
         } catch (RuntimeException ex) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
         }
+    }
+
+    /** Self-service account deletion: removes the logged-in person's account and data, then ends the session. */
+    @DeleteMapping("/me")
+    public ResponseEntity<?> deleteOwnAccount(HttpSession session) {
+        Long sessionUserId = (Long) session.getAttribute("userId");
+        if (sessionUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Please log in again.");
+        }
+        try {
+            userService.deleteUser(sessionUserId);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+        }
+        session.invalidate();
+        return ResponseEntity.noContent().build();
     }
 
     // The admin dashboard has always had a Delete button; this is the endpoint it calls.

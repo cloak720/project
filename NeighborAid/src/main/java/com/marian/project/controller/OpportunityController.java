@@ -6,6 +6,7 @@ import com.marian.project.repository.VolunteerRepository;
 import com.marian.project.service.OpportunityService;
 
 import jakarta.servlet.http.HttpSession;
+import com.marian.project.RequestValidation;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,9 @@ public class OpportunityController {
 
     @Autowired
     private VolunteerRepository volunteerRepository;
+
+    @Autowired
+    private RequestValidation validation;
 
     private static boolean isAdmin(HttpSession session) {
         Integer role = (Integer) session.getAttribute("role");
@@ -71,6 +75,10 @@ public class OpportunityController {
         if (!isAdmin(session)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can create opportunities.");
         }
+        var invalid = validation.problems(opportunity);
+        if (invalid.isPresent()) {
+            return invalid.get();
+        }
         opportunity.setId(null);
         opportunity.setVolunteers(null);
         return ResponseEntity.status(HttpStatus.CREATED).body(opportunityService.createOpportunity(opportunity));
@@ -80,6 +88,10 @@ public class OpportunityController {
     public ResponseEntity<?> updateOpportunity(@PathVariable Long id, @RequestBody Opportunity opportunity, HttpSession session) {
         if (!isAdmin(session)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can edit opportunities.");
+        }
+        var invalid = validation.problems(opportunity);
+        if (invalid.isPresent()) {
+            return invalid.get();
         }
         long joined = volunteerRepository.countByOpportunityId(id);
         if (opportunity.getVolunteerLimit() == null || opportunity.getVolunteerLimit() < Math.max(1, joined)) {

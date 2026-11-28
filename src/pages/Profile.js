@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Cake, Home as HomeIcon, Mail, Pencil, Phone, ShieldCheck } from "lucide-react";
 import api, { errorMessage } from "../lib/api";
-import { ROLES, ROLE_LABELS, updateSession } from "../lib/auth";
+import { ROLES, ROLE_LABELS, clearSession, updateSession } from "../lib/auth";
 import { fullName } from "../lib/format";
 import { validate, MIN_AGE } from "../lib/validation";
-import { useSession, useToast } from "../context/AppContext";
+import { useConfirm, useSession, useToast } from "../context/AppContext";
 import useTitle from "../hooks/useTitle";
 import { LogoMark } from "../components/art/Logo";
 import { Alert, Avatar, Field, Loading, PageHead, describedBy } from "../components/ui";
@@ -21,6 +22,31 @@ const Profile = () => {
   useTitle("Your profile");
   const session = useSession();
   const toast = useToast();
+  const confirm = useConfirm();
+  const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
+
+  const deleteAccount = async () => {
+    const ok = await confirm({
+      kicker: "Delete account",
+      title: "Delete your NeighborAid account?",
+      body: "Your profile, your requests and your project sign-ups are removed for good. Requests you were helping with go back on the noticeboard. This can't be undone.",
+      confirmLabel: "Delete my account",
+      cancelLabel: "Keep my account",
+      tone: "danger",
+    });
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await api.delete("/user/me");
+      clearSession();
+      toast("Your account has been deleted. Thank you for being a neighbor.");
+      navigate("/", { replace: true });
+    } catch (err) {
+      toast(errorMessage(err, "We couldn't delete your account."), "error");
+      setDeleting(false);
+    }
+  };
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState(null);
   const [errors, setErrors] = useState({});
@@ -188,6 +214,18 @@ const Profile = () => {
           </form>
         )}
       </section>
+
+      {session.role !== ROLES.ADMIN && (
+        <section className="card card--pad danger-zone" aria-labelledby="danger-title">
+          <h2 id="danger-title" className="danger-zone__title">Leaving NeighborAid?</h2>
+          <p className="small text-2">
+            You can delete your account and everything attached to it at any time. Admin accounts are removed by another admin.
+          </p>
+          <button type="button" className="btn btn--danger" onClick={deleteAccount} disabled={deleting}>
+            {deleting ? "Deleting…" : "Delete my account"}
+          </button>
+        </section>
+      )}
     </div>
   );
 };

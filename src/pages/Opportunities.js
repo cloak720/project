@@ -14,23 +14,29 @@ import { Alert, Avatar, EmptyState, PageHead, SkeletonGrid, TabPanel, Tabs, list
 
 const byDate = (a, b) => new Date(a.deadline) - new Date(b.deadline);
 
-const Roster = ({ volunteers }) =>
+// Opportunity data only says who signed up; admins get contact details from the member list.
+const Roster = ({ volunteers, contacts }) =>
   volunteers?.length ? (
     <ul className="roster">
-      {volunteers.map((v) => (
-        <li key={v.id} className="person">
-          <Avatar person={v.user} size="sm" />
-          <div>
-            <div className="small">
-              <strong>{fullName(v.user)}</strong>
+      {volunteers.map((v) => {
+        const contact = contacts.get(v.user?.id);
+        return (
+          <li key={v.id} className="person">
+            <Avatar person={v.user} size="sm" />
+            <div>
+              <div className="small">
+                <strong>{fullName(v.user)}</strong>
+              </div>
+              {contact && (
+                <div className="tiny muted">
+                  {contact.email}
+                  {contact.phoneNo ? ` · ${contact.phoneNo}` : ""}
+                </div>
+              )}
             </div>
-            <div className="tiny muted">
-              {v.user?.email}
-              {v.user?.phoneNo ? ` · ${v.user.phoneNo}` : ""}
-            </div>
-          </div>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ul>
   ) : (
     <p className="small muted roster">Nobody has signed up yet.</p>
@@ -52,6 +58,7 @@ const Opportunities = () => {
   const [category, setCategory] = useState("");
   const [expanded, setExpanded] = useState({});
   const [busy, setBusy] = useState(null);
+  const [contacts, setContacts] = useState(() => new Map());
 
   const views = isAdmin ? ["upcoming", "past"] : isVolunteer ? ["open", "joined"] : ["open"];
   const view = views.includes(params.get("view")) ? params.get("view") : views[0];
@@ -75,6 +82,13 @@ const Opportunities = () => {
       setOpportunities((o) => o || []);
     }
   }, [isAdmin, isVolunteer]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    getList("/user/all")
+      .then((users) => setContacts(new Map(users.map((u) => [u.id, u]))))
+      .catch(() => {});
+  }, [isAdmin]);
 
   useEffect(() => {
     load();
@@ -288,7 +302,7 @@ const Opportunities = () => {
                             <Users size={15} aria-hidden="true" /> {expanded[o.id] ? "Hide" : "Show"} who's coming ({o.volunteers?.length || 0})
                             <ChevronDown size={15} aria-hidden="true" className={expanded[o.id] ? "is-flipped" : ""} />
                           </button>
-                          {expanded[o.id] && <Roster volunteers={o.volunteers} />}
+                          {expanded[o.id] && <Roster volunteers={o.volunteers} contacts={contacts} />}
                         </>
                       )}
                     </EventRow>

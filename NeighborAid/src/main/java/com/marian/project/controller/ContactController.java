@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/contact")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class ContactController {
 
     @Autowired
@@ -35,6 +34,10 @@ public class ContactController {
                 || message.getSubject() == null || message.getSubject().isBlank()
                 || message.getMessage() == null || message.getMessage().isBlank()) {
             return ResponseEntity.badRequest().body("Email, subject and message are required.");
+        }
+        if (message.getSubject().length() > 150 || message.getMessage().length() > 2000
+                || (message.getName() != null && message.getName().length() > 120)) {
+            return ResponseEntity.badRequest().body("That message is too long.");
         }
         message.setId(null);
         message.setReply(null);

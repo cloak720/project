@@ -13,7 +13,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/feedback")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class FeedbackController {
 
     @Autowired
@@ -43,6 +42,9 @@ public class FeedbackController {
         }
         if (feedback.getRating() == null || feedback.getRating() < 1 || feedback.getRating() > 5) {
             return ResponseEntity.badRequest().body("Rating must be between 1 and 5 stars.");
+        }
+        if (feedback.getComment() != null && feedback.getComment().length() > 1000) {
+            return ResponseEntity.badRequest().body("Comments can be up to 1000 characters.");
         }
         Long volunteerId = feedback.getVolunteerId();
         boolean helpedThisUser = volunteerId != null && requestRepository.findByUserId(userId).stream()

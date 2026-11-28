@@ -18,13 +18,16 @@ public class User {
     private Long id;
 
     @NotBlank(message = "First name cannot be blank")
+    @Size(max = 60, message = "First name is too long")
     private String firstName;
 
     @NotBlank(message = "Last name cannot be blank")
+    @Size(max = 60, message = "Last name is too long")
     private String lastName;
 
     @NotBlank(message = "Email cannot be blank")
     @Email(message = "Email must be valid")
+    @Size(max = 254, message = "Email is too long")
     private String email;
 
     @NotBlank(message = "Password cannot be blank")
@@ -39,9 +42,11 @@ public class User {
     private Integer age;
 
     @NotBlank(message = "Phone number cannot be blank")
+    @Pattern(regexp = "^\\d{10,15}$", message = "Phone number must be 10 to 15 digits")
     private String phoneNo;
 
     @NotBlank(message = "House number cannot be blank")
+    @Size(max = 20, message = "House number is too long")
     private String houseNo;
     
     // New field to track banned status

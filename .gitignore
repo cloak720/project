@@ -24,3 +24,8 @@ yarn-error.log*
 
 # backend build output
 NeighborAid/target/
+
+# Eclipse project files (machine-specific)
+NeighborAid/.classpath
+NeighborAid/.project
+NeighborAid/.settings/

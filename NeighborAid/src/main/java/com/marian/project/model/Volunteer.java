@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 public class Volunteer {
@@ -16,6 +17,8 @@ public class Volunteer {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     @NotNull(message = "User must be specified")
+    // Opportunity listings are public: show who signed up, never their contact details.
+    @JsonIgnoreProperties({"email", "phoneNo", "age", "houseNo", "role", "banned"})
     private User user;
 
     // Many volunteers belong to one opportunity

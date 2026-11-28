@@ -14,7 +14,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/volunteers")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class VolunteerController {
 
     @Autowired
@@ -47,22 +46,20 @@ public class VolunteerController {
             Volunteer volunteer = volunteerService.acceptOpportunity(user.getId(), opportunityId);
             return ResponseEntity.ok(volunteer);
         } catch (IllegalArgumentException ex) {
-            System.out.println("🔴 NOT FOUND ERROR: " + ex.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
         } catch (IllegalStateException ex) {
-            System.out.println("⚠️ CONFLICT ERROR: " + ex.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
-        } catch (Exception ex) {
-            System.out.println("❌ SERVER ERROR: " + ex.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                 .body("An error occurred: " + ex.getMessage());
         }
+        // Anything else is unexpected: ApiExceptionHandler logs it and returns a generic message.
     }
 
     @GetMapping
-    public ResponseEntity<List<Volunteer>> getAllVolunteers() {
-        List<Volunteer> volunteers = volunteerService.getAllVolunteers();
-        return ResponseEntity.ok(volunteers);
+    public ResponseEntity<List<Volunteer>> getAllVolunteers(HttpSession session) {
+        Integer role = (Integer) session.getAttribute("role");
+        if (role == null || role != 0) { // Admin only: this lists every sign-up
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok(volunteerService.getAllVolunteers());
     }
     
     // === New Cancel Endpoint ===

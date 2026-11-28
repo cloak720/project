@@ -4,12 +4,14 @@ import com.marian.project.model.Request;
 import com.marian.project.service.RequestService;
 import com.marian.project.service.UserService;
 import jakarta.servlet.http.HttpSession;
+import com.marian.project.RequestValidation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/requests")
@@ -19,19 +21,23 @@ public class RequestController {
     private RequestService requestService;
 
     @Autowired
+    private RequestValidation validation;
+
+    @Autowired
     private UserService userService;  // If needed elsewhere
 
     // Get pending requests (for volunteers)
     @GetMapping("/pending")
     public ResponseEntity<List<Request>> getPendingRequests(HttpSession session) {
         Integer role = (Integer) session.getAttribute("role");
-        Long userId = (Long) session.getAttribute("userId");
-        System.out.println("Session userId: " + userId + ", role: " + role);
-        
         if (role == null || role != 2) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        return ResponseEntity.ok(requestService.getPendingRequests());
+        // The resident's phone number is only shared with the volunteer who accepts the request.
+        List<Request> open = requestService.getPendingRequests().stream()
+                .map(Request::withoutContactDetails)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(open);
     }
 
     @GetMapping("/all")
@@ -74,10 +80,18 @@ public class RequestController {
 
     // Create a new request (for users)
     @PostMapping("/create")
-    public ResponseEntity<Request> createRequest(@RequestBody Request request, HttpSession session) {
+    public ResponseEntity<?> createRequest(@RequestBody Request request, HttpSession session) {
         Long userId = (Long) session.getAttribute("userId");
+        Integer role = (Integer) session.getAttribute("role");
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (role == null || role != 1) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only residents can post requests.");
+        }
+        var invalid = validation.problems(request);
+        if (invalid.isPresent()) {
+            return invalid.get();
         }
 
         try {
